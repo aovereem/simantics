@@ -117,10 +117,10 @@ export async function serve(opts: ServeOptions): Promise<{ url: string; close: (
     }
 
     let dirty = false;
-    watcher.start((fact) => {
-      colony.ingest(fact);
-      dirty = true;
-    });
+    watcher.start(
+      (fact) => { colony.ingest(fact); dirty = true; },
+      (sessionId) => { colony.dropSession(sessionId); dirty = true; }, // a continuation superseded its predecessor
+    );
 
     persist = () => {
       if (!dirty) return;

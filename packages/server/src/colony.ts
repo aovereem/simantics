@@ -170,6 +170,12 @@ export class Colony {
     if (fact.endsTurn) this.sealOpen(s, fact.ts);
   }
 
+  /** Drop a session entirely — used when a continuation file supersedes its predecessor
+   *  (the predecessor's work is replayed in the newer file, so its nest must not linger). */
+  dropSession(sessionId: string): void {
+    this.sessions.delete(sessionId);
+  }
+
   /** mark a session as errored — becomes the rain alarm if it stays stuck */
   markError(sessionId: string, now = Date.now()): void {
     const s = this.sessions.get(sessionId);

@@ -1,5 +1,5 @@
 import { watch, type FSWatcher } from "chokidar";
-import { createReadStream, statSync } from "node:fs";
+import { createReadStream, statSync, openSync, readSync, closeSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -18,6 +18,7 @@ const RECENT_MS = 30 * 60_000; // only cold-load transcripts touched this recent
 export class TranscriptWatcher {
   private watcher?: FSWatcher;
   private offsets = new Map<string, number>();
+  private rootCache = new Map<string, string>(); // file path → its conversation root (first message uuid)
 
   constructor(private root: string = DEFAULT_TRANSCRIPT_GLOB, private loadAll = false) {}
 
@@ -42,7 +43,7 @@ export class TranscriptWatcher {
     }
   }
 
-  start(onFact: (fact: Fact) => void): void {
+  start(onFact: (fact: Fact) => void, onDropSession: (sessionId: string) => void = () => {}): void {
     // chokidar v4 dropped glob support — watch the projects dir itself
     // (recursive by default) and filter to .jsonl ourselves. Watching a literal
     // glob string here silently matched nothing on Windows (backslash paths).
@@ -57,23 +58,70 @@ export class TranscriptWatcher {
     // from the initial scan, then flush it sorted by timestamp; after that, stream
     // live facts straight through (they already arrive in order).
     const buffer: Fact[] = [];
-    const pending: Promise<void>[] = [];
     let ready = false;
     const emit = (fact: Fact) => { if (ready) onFact(fact); else buffer.push(fact); };
 
+    // A continued conversation (--continue / a fresh session after the old one filled
+    // its context) REPLAYS its predecessor verbatim into a new file — same message uuids,
+    // same conversation root. Draining both would count the same work twice (or thrice).
+    // So we key files by conversation root and only ever drain the LATEST one per root.
+    const initial: string[] = [];                  // files seen during the initial scan
+    const chosen = new Map<string, string>();      // conversation root → the live file we drain
+    const mtimeOf = (path: string) => { try { return statSync(path).mtimeMs; } catch { return 0; } };
+
     const handle = (path: string) => {
       if (!path.endsWith(".jsonl")) return;
-      const p = this.drain(path, emit);
-      if (!ready) pending.push(p);
+      if (!ready) { initial.push(path); return; } // collect; the root grouping happens at 'ready'
+      // live: a file appeared/changed after the initial scan
+      const root = this.fileRoot(path);
+      const cur = chosen.get(root);
+      if (!cur || cur === path) { chosen.set(root, path); void this.drain(path, emit); return; }
+      if (mtimeOf(path) > mtimeOf(cur)) {           // a fresh continuation supersedes its predecessor
+        onDropSession(basename(cur, ".jsonl"));     // its nest moves to the new (fuller) session
+        this.offsets.delete(cur);
+        chosen.set(root, path);
+        void this.drain(path, emit);
+      }
+      // else: an older predecessor of an already-chosen file → ignore (its work lives in `cur`)
     };
     this.watcher.on("add", handle).on("change", handle);
     this.watcher.on("ready", async () => {
-      await Promise.allSettled(pending);
+      // group the initial files by conversation root, keep the newest per root, drain those
+      const latest = new Map<string, string>();
+      for (const path of initial) {
+        const root = this.fileRoot(path);
+        const cur = latest.get(root);
+        if (!cur || mtimeOf(path) > mtimeOf(cur)) latest.set(root, path);
+      }
+      const drains: Promise<void>[] = [];
+      for (const [root, path] of latest) { chosen.set(root, path); drains.push(this.drain(path, emit)); }
+      await Promise.allSettled(drains);
       buffer.sort((a, b) => a.ts - b.ts);
       for (const fact of buffer) onFact(fact);
       buffer.length = 0;
       ready = true;
     });
+  }
+
+  /** A file's conversation root = the first message uuid in it. Continuations replay
+   *  from the same root, so they share it; independent conversations don't. Reads only
+   *  the head (cheap, cached). Falls back to the file's own name → its own group. */
+  private fileRoot(path: string): string {
+    const cached = this.rootCache.get(path);
+    if (cached) return cached;
+    let root = basename(path, ".jsonl");
+    try {
+      const fd = openSync(path, "r");
+      const buf = Buffer.alloc(524288); // 512 KB head — the first uuid'd entry sits well within this
+      const n = readSync(fd, buf, 0, buf.length, 0);
+      closeSync(fd);
+      for (const line of buf.toString("utf8", 0, n).split("\n").slice(0, 24)) {
+        if (!line.trim()) continue;
+        try { const o = JSON.parse(line); if (typeof o.uuid === "string") { root = o.uuid; break; } } catch { /* partial/oversized line — skip */ }
+      }
+    } catch { /* unreadable — fall back to the file's own name */ }
+    this.rootCache.set(path, root);
+    return root;
   }
 
   async stop(): Promise<void> {

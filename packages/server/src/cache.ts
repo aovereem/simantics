@@ -13,7 +13,7 @@ import { join } from "node:path";
  */
 
 // Bump when the serialized shape changes — an old cache is then ignored, not parsed.
-const CACHE_VERSION = 3; // v3: Task gained hung (v2: activeMs/lastTs) — older caches are ignored + cold-drained
+const CACHE_VERSION = 4; // v4: continuation files are deduped (subsumed predecessors dropped) — older caches held the dupes, so cold-drain fresh
 
 const CACHE_DIR = join(homedir(), ".claude", "simantics");
 
