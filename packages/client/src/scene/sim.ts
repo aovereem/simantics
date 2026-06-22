@@ -25,6 +25,7 @@ const WALK_SPEED = 0.55;   // ... while wandering
 const GROW = 0.12;         // how fast a freshly-dug chamber opens to full size
 const MAX_DIGS = 3;        // diggers carving at once
 const MAX_WALKERS = 22;    // residents roaming at once (others rest in rooms) — a livelier warren
+const MAX_SOLDIER_PATROL = 6; // soldiers patrolling at once; the rest guard the queen (a busy colony mints dozens — uncapped they flood the tunnels)
 const REST_MIN = 40, REST_MAX = 180; // frames an ant lingers before its next outing
 const JOURNEY_MIN = 2, JOURNEY_VAR = 4; // rooms an ant roams through per outing (2..5), not one hop
 const PATROL_HOPS_MIN = 3, PATROL_HOPS_VAR = 4; // out-leg budget (3..6 rooms deep); the inbound leg runs until home
@@ -181,7 +182,11 @@ export class ColonySim {
       if (!c) { this.cham.set(n.id, { node: n, x: n.x, y: n.y, r: 0, tr: n.r, revealed: false, crop: this.booted && cb.cap > 0 ? Math.min(cb.cap, CROP_SEED) : 0, cropCap: cb.cap, blight: cb.blight }); this.order.push(n.id); }
       // a revealed room is fixed; an in-progress one still extends. Re-derive the
       // crop CAP from the latest diff, but never reset the live crop (sim owns it).
-      else { c.node = n; c.tr = n.r; c.cropCap = cb.cap; c.blight = cb.blight; if (!c.revealed) { c.x = n.x; c.y = n.y; } }
+      else {
+        const becameHung = n.hung && !c.node.hung; // a live frontier just got closed out (idle mid-turn)
+        c.node = n; c.tr = n.r; c.cropCap = cb.cap; c.blight = cb.blight; if (!c.revealed) { c.x = n.x; c.y = n.y; }
+        if (becameHung) { c.crop = 0; this.ants = this.ants.filter((a) => a.founded !== n.id); } // its resident leaves; an abandoned dig grows no fungus, just a trailing tunnel
+      }
     }
     for (const t of bp.tunnels) {
       if (t.cross) {
@@ -313,7 +318,11 @@ export class ColonySim {
       const c = this.cham.get(id);
       if (!c) continue;
       if (c.node.done === false) continue; // an in-progress turn → dig it live, don't pre-drop it
-      c.revealed = true; c.r = c.tr; c.crop = c.cropCap; // a pre-existing garden is already grown
+      c.revealed = true; c.r = c.tr;
+      // a hung turn (abandoned mid-dig) leaves only its trailing tunnel: reveal it so the
+      // tunnel carves, but spawn no resident, grow no fungus, draw no chamber.
+      if (c.node.hung) { c.crop = 0; this.onTurn(); continue; }
+      c.crop = c.cropCap; // a pre-existing garden is already grown
       const isQ = !!c.node.isQueen;
       // a rock-blocked dig: its ant backed out to the parent room — never sits on the boulder
       let home = id;
@@ -397,7 +406,12 @@ export class ColonySim {
       this.revealIdx++; digging++;
     }
 
-    let freeWalk = MAX_WALKERS - this.ants.reduce((n, a) => n + (a.state === "walk" ? 1 : 0), 0);
+    // two separate roaming budgets so neither caste starves the other: residents share
+    // MAX_WALKERS, soldiers share MAX_SOLDIER_PATROL (the rest guard the queen). Counting
+    // them together — and letting soldiers ignore the cap — used to flood the trunk with
+    // patrol columns AND drive freeWalk negative, freezing the workers.
+    let freeWalk = MAX_WALKERS - this.ants.reduce((n, a) => n + (a.state === "walk" && a.caste !== "soldier" ? 1 : 0), 0);
+    let freeSoldier = MAX_SOLDIER_PATROL - this.ants.reduce((n, a) => n + (a.state === "walk" && a.caste === "soldier" ? 1 : 0), 0);
 
     for (const a of this.ants) {
       if (a.queen) { this.stepQueen(a, dt); continue; }
@@ -424,15 +438,15 @@ export class ColonySim {
       if (a.state === "rest") {
         a.rest = (a.rest ?? 0) - dt;
         this.ambleIn(a, dt); // mill gently in the room instead of standing frozen
-        // soldiers patrol uncapped (they're few, and patrolling is the point);
-        // workers share the MAX_WALKERS budget so most of them rest in rooms.
-        const canWalk = a.caste === "soldier" || freeWalk > 0 || this.wantsFood(a); // a hungry worker always gets to go find food
+        // each caste draws from its own budget so most of either rest in rooms: a handful
+        // of soldiers patrol while the rest guard the queen; workers share MAX_WALKERS.
+        const canWalk = a.caste === "soldier" ? freeSoldier > 0 : (freeWalk > 0 || this.wantsFood(a)); // a hungry worker always gets to go find food
         if ((a.rest ?? 0) <= 0 && canWalk) {
           if (a.caste === "soldier") {
             // a soldier bases at the queen: patrol OUT only when already home, otherwise
             // climb back to her first — so they gravitate to the queen and guard her.
             a.outbound = a.at === this.queenId; a.prev = undefined;
-            if (this.wander(a)) a.hops = PATROL_HOPS_MIN + Math.floor(Math.random() * PATROL_HOPS_VAR);
+            if (this.wander(a)) { a.hops = PATROL_HOPS_MIN + Math.floor(Math.random() * PATROL_HOPS_VAR); freeSoldier--; }
             else a.rest = this.restFor(a);
           } else if (this.startWorkerOuting(a)) { // carry food home / go feed, else roam & harvest
             freeWalk--;

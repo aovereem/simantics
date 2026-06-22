@@ -5,7 +5,7 @@ export type EggState = "none" | "egg" | "hatched";
 
 export interface CNode {
   id: string; label: string; tokens: number; actions: number; durationMs: number; startTs: number;
-  children: number; edited: boolean; defended: boolean; blocked: boolean; done: boolean;
+  children: number; edited: boolean; defended: boolean; blocked: boolean; done: boolean; hung: boolean;
   linesAdded: number; linesRemoved: number; reads: number; committed: boolean;
   antId: string; caste: Caste; isQueen: boolean; isHub: boolean; egg: EggState;
   x: number; y: number; r: number;
@@ -392,7 +392,7 @@ function mergeTrivial(tasks: TaskSnapshot[], antId: string, caste: Caste): CNode
   const merged: CNode[] = [];
   let prev: CNode | null = null;
   for (const t of tasks) {
-    const trivial = t.done && prev && !t.edited && !t.blocked && t.children === 0 && t.tokens < TRIVIAL_TOKENS;
+    const trivial = t.done && !t.hung && prev && !t.edited && !t.blocked && t.children === 0 && t.tokens < TRIVIAL_TOKENS; // a hung turn always keeps its own (trailing) tunnel
     if (trivial && prev) {
       prev.tokens += t.tokens; prev.actions += t.actions;
       prev.children += t.children; prev.durationMs += t.durationMs;
@@ -403,7 +403,7 @@ function mergeTrivial(tasks: TaskSnapshot[], antId: string, caste: Caste): CNode
     }
     const cn: CNode = {
       id: t.id, label: t.label, tokens: t.tokens, actions: t.actions, durationMs: t.durationMs, startTs: t.startTs,
-      children: t.children, edited: t.edited, defended: t.defended, blocked: t.blocked, done: t.done,
+      children: t.children, edited: t.edited, defended: t.defended, blocked: t.blocked, done: t.done, hung: t.hung,
       linesAdded: t.linesAdded, linesRemoved: t.linesRemoved, reads: t.reads, committed: t.committed,
       antId, caste, isQueen: false, isHub: false, egg: "none", x: 0, y: 0, r: 0,
     };

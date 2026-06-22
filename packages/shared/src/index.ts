@@ -92,6 +92,9 @@ export interface TaskSnapshot {
   blocked: boolean;
   /** false = the in-progress frontier task */
   done: boolean;
+  /** the turn never sealed on its own — the session went idle mid-turn (killed/crashed,
+   *  no end_turn) and we closed it out. Rendered as a trailing tunnel, no chamber. */
+  hung: boolean;
   /** lines added / removed by edits in this turn — net diff = the chamber's
    *  vitality (lush fungus when positive, blighted/weeded when negative). */
   linesAdded: number;

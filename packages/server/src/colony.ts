@@ -12,6 +12,7 @@ const RETURN_MS = 120_000; // ... this long → heading home
 const GONE_MS = 600_000; // ... this long → drop from the colony
 const STUCK_MS = 8_000; // a session must stay errored (no recovery) this long to be stuck
 const ACTIVE_CAP = 120_000; // a gap longer than this between a turn's facts is idle, not work — capped when accruing ACTIVE time
+const HUNG_MS = 300_000; // an open frontier turn idle this long never sealed (session killed/crashed mid-turn) — close it out
 
 interface Task {
   label: string;
@@ -21,6 +22,7 @@ interface Task {
   endTs: number;
   activeMs: number; // accrued ACTIVE time (capped gaps between facts) — idle time excluded
   lastTs: number;   // ts of the last fact, to measure the next gap
+  hung: boolean;    // closed out after going idle mid-turn (never sealed itself) — a trailing tunnel, no chamber
   children: number;
   edited: boolean;
   defended: boolean;
@@ -196,6 +198,12 @@ export class Colony {
         else if (age > IDLE_MS) state = "resting";
       }
 
+      // close out a hung turn: the session went idle mid-turn and the turn never sealed
+      // (no end_turn — killed/crashed). Past HUNG_MS it's clearly not live; seal it and
+      // mark it hung so it renders as a trailing tunnel instead of a frozen "digging" room.
+      const last = s.tasks[s.tasks.length - 1];
+      if (last && !last.done && age > HUNG_MS) { this.seal(last, s.lastActiveTs); last.hung = true; }
+
       foodStore += s.totalTokens;
       harvest += Math.max(0, s.linesAdded - s.linesRemoved);
       if (s.errored && now - s.erroredSince >= STUCK_MS && age < RETURN_MS) alarm = true;
@@ -212,6 +220,7 @@ export class Colony {
         defended: t.defended,
         blocked: t.blocked,
         done: t.done,
+        hung: t.hung,
         linesAdded: t.linesAdded,
         linesRemoved: t.linesRemoved,
         reads: t.reads,
@@ -320,7 +329,7 @@ export class Colony {
   }
 
   private newTask(label: string, ts: number): Task {
-    return { label, tokens: 0, actions: 0, startTs: ts, endTs: ts, activeMs: 0, lastTs: ts, children: 0, edited: false, defended: false, blocked: false, done: false, linesAdded: 0, linesRemoved: 0, reads: 0, committed: false };
+    return { label, tokens: 0, actions: 0, startTs: ts, endTs: ts, activeMs: 0, lastTs: ts, hung: false, children: 0, edited: false, defended: false, blocked: false, done: false, linesAdded: 0, linesRemoved: 0, reads: 0, committed: false };
   }
 }
 

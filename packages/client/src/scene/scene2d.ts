@@ -506,7 +506,7 @@ export class Scene {
     const paths = t.tunnels
       .filter((tn) => this.inView(tn.pts[0].x, tn.pts[0].y, tn.w) || this.inView(tn.pts[tn.pts.length - 1].x, tn.pts[tn.pts.length - 1].y, tn.w))
       .map((tn) => ({ pts: partialPts(tn.pts, tn.carve), w: tn.w }));
-    const vis = t.nodes.filter((n) => this.inView(n.x, n.y, n.r + 4)); // only the on-screen chambers
+    const vis = t.nodes.filter((n) => !n.hung && this.inView(n.x, n.y, n.r + 4)); // on-screen chambers only; a hung turn is just its trailing tunnel — no chamber
 
     // pass 1 — outer excavated soil (the darkest rim); fungus walls go mossy, blighted ones jaundiced, the queen's gilded
     for (const p of paths) strokeVary(ctx, p.pts, p.w * 1.55, COL.dugRimDeep);
@@ -590,7 +590,7 @@ export class Scene {
    *  queen's central larder heap. Drawn on the chamber floor, under leaves and ants. */
   private drawFungus(ctx: CanvasRenderingContext2D, t: Tree): void {
     for (const n of t.nodes) {
-      if (!this.inView(n.x, n.y, n.r)) continue; // skip off-screen gardens
+      if (n.hung || !this.inView(n.x, n.y, n.r)) continue; // skip off-screen gardens + abandoned (hung) digs
       if (n.isQueen) { this.drawPile(ctx, n, t.pile ?? 0); continue; } // fresh hauled fungus heaps on her floor; the repletes (ants) eat it
       if (n.blocked) continue; // a boulder (interrupted dig) is bare rock — no fungus grows on it
       const crop = n.crop ?? 0, blight = n.blight ?? 0;
