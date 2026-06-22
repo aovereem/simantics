@@ -21,6 +21,8 @@ export interface ForageInfo { id: string; chamberId: string; inFlight: boolean; 
 export interface Tree {
   nodes: CNode[]; tunnels: Tunnel[]; ants: AntDot[]; flora: Flora[]; forages: ForageInfo[]; leaves: Pt[];
   hole: { x: number; y: number };
+  /** every surface entrance — the queen's central hole plus one per later session. */
+  holes: Pt[];
   newest: { x: number; y: number } | null;
   /** frontier chamber of the most-recently-active session + its last-fact time —
    *  lets the sim keep that chamber's ant "working" while the agent still is. */
@@ -40,10 +42,15 @@ export interface Tree {
   leavesTotal?: number;
 }
 export const SURFACE = "__surface__";
+/** ROOT is the queen's central anchor; every later session gets its OWN surface anchor,
+ *  `__surface__#<id>`, so they all start with SURFACE — one colony, many doors. */
+export const isSurface = (id: string | undefined): boolean => !!id && id.startsWith(SURFACE);
 
 const ROOT = "__surface__";
 const GAP = 12;            // soil between two chambers
 const QUEEN_DEPTH = 360;   // entrance shaft to the queen — deep, but not a long empty drop
+const ENTRY_DEPTH = 170;   // a later session's entry room sits in the SHALLOW strata, above the queen
+const ENTRY_GAP = 320;     // clear soil between the warren's current edge and a new session's hole
 const REACH = 0.95;        // tunnel length as a fraction of token-distance
 const FLOOR = 2650;        // hard depth cap: digs turn UP near here and none pass it
                            // (the cobble bedrock lies below this, unreachable by the colony)
@@ -139,17 +146,45 @@ export class TreeLayout {
     };
     const redirect = new Map<string, string>(); // chamber that fattened away → the room it grew
 
-    // queen first, then any subagent whose spawning chamber is already dug
+    // The founding queen first (+ her whole subtree), then each later top-level session,
+    // then their subtrees — depth-first, so the warren's width is known when we site the
+    // next session's hole off to the side.
     const order = orderLineages(snap.bugs, queenId, antHub);
+    const holes: Pt[] = [{ x: 0, y: 0 }]; // the queen's central hole; each session adds its own
+    const connectors: CEdge[] = [];        // a stitch from each session's entry room to the warren
+    let satSide = 1;                       // alternate new holes left/right of the colony
     for (const id of order) {
       const chambers = lineages.get(id);
       if (!chambers) continue;
       const b = bugById.get(id)!;
-      const rootParent =
-        b.parentTaskId && ctx.node.has(b.parentTaskId) ? b.parentTaskId :
-        b.parentId && antHub.has(b.parentId) && ctx.node.has(antHub.get(b.parentId)!) ? antHub.get(b.parentId)! :
-        ROOT;
+      let rootParent: string;
+      if (b.parentId) {
+        // a subagent is a hard branch off the chamber/session that spawned it
+        rootParent =
+          b.parentTaskId && ctx.node.has(b.parentTaskId) ? b.parentTaskId :
+          antHub.has(b.parentId) && ctx.node.has(antHub.get(b.parentId)!) ? antHub.get(b.parentId)! :
+          ROOT;
+      } else if (id === queenId) {
+        rootParent = ROOT; // the central shaft down to the deep founding heart
+      } else {
+        // a later session: its OWN hole + a shallow entry room off to the side of the warren
+        const { minX, maxX } = xSpan(ctx.placed);
+        const entryX = satSide > 0 ? maxX + ENTRY_GAP : minX - ENTRY_GAP;
+        satSide = -satSide;
+        rootParent = `${SURFACE}#${id}`;
+        ctx.pos.set(rootParent, { x: entryX, y: 0, r: 0 });
+        ctx.depth.set(rootParent, 0);
+        holes.push({ x: entryX, y: 0 });
+      }
+      const before = ctx.placed.length;
       this.placeLineage(chambers, rootParent, ctx, redirect);
+      if (!b.parentId && id !== queenId) {
+        // stitch the new session into the one colony: a connector tunnel from its entry
+        // room to the nearest existing chamber, so ants can haul across (food economy holds).
+        const hub = ctx.pos.get(antHub.get(id)!);
+        const near = nearestPlaced(hub, ctx.placed.slice(0, before));
+        if (hub && near) connectors.push({ ax: hub.x, ay: hub.y, bx: near.x, by: near.y, fromId: antHub.get(id)!, toId: near.id, cross: true });
+      }
     }
 
     const resolve = (id: string | undefined) => {
@@ -183,7 +218,7 @@ export class TreeLayout {
       }
     }
 
-    const allEdges = [...ctx.edges, ...crossLinks(ctx)];
+    const allEdges = [...ctx.edges, ...connectors, ...crossLinks(ctx)];
     const tunnels: Tunnel[] = allEdges.map((e) => {
       // an in-progress (still-extending) tunnel uses an arc-length meander so its
       // dug part doesn't reshuffle each frame as it lengthens; sealed ones meander normally.
@@ -199,7 +234,7 @@ export class TreeLayout {
         if (cid && ctx.node.has(cid)) forages.push({ id: f.id, chamberId: cid, inFlight: f.doneTs === undefined });
       }
     }
-    return { nodes, tunnels, ants, flora: [], forages, leaves: [], hole: { x: 0, y: 0 }, newest, newestId, newestTs, bounds: bounds(nodes), harvest: snap.harvest };
+    return { nodes, tunnels, ants, flora: [], forages, leaves: [], hole: { x: 0, y: 0 }, holes, newest, newestId, newestTs, bounds: bounds(nodes), harvest: snap.harvest };
   }
 
   /** Run the egg simulation over one lineage and place (or fatten) each chamber. */
@@ -282,7 +317,7 @@ export class TreeLayout {
     const frozen = this.posCache.get(c.id);
     if (frozen) {
       bx = frozen.x; by = frozen.y; // sealed turn → fixed spot, never drifts
-    } else if (parentId !== ROOT && this.headingCache.has(c.id)) {
+    } else if (!isSurface(parentId) && this.headingCache.has(c.id)) {
       // a turn being dug live: keep its established heading, set length from its
       // CURRENT duration so the tunnel keeps lengthening as the work piles up.
       const ang = this.headingCache.get(c.id)!;
@@ -291,8 +326,10 @@ export class TreeLayout {
       by = clampY(p.y + Math.sin(ang) * reach);
     } else {
       let baseAng: number, reach: number, vSign = 1;
-      if (parentId === ROOT) {
-        baseAng = Math.PI / 2; reach = QUEEN_DEPTH; // entrance shaft to the deep queen
+      if (isSurface(parentId)) {
+        // a straight shaft down from a surface hole: deep to the founding queen, shallow
+        // to a later session's entry room.
+        baseAng = Math.PI / 2; reach = parentId === ROOT ? QUEEN_DEPTH : ENTRY_DEPTH;
       } else {
         // near the floor the dig turns UP instead of down — the colony builds back
         // up rather than drilling into bedrock; the closer to the floor, the likelier.
@@ -312,7 +349,7 @@ export class TreeLayout {
         // keep the search in the digging hemisphere — down normally, up near the floor
         const lo = vSign > 0 ? Math.PI * 0.06 : -Math.PI * 0.94;
         const hi = vSign > 0 ? Math.PI * 0.94 : -Math.PI * 0.06;
-        const a = parentId === ROOT ? baseAng + da : clamp(baseAng + da, lo, hi);
+        const a = isSurface(parentId) ? baseAng + da : clamp(baseAng + da, lo, hi);
         const d = reach * (1 + dd);
         const x = p.x + Math.cos(a) * d, y = clampY(p.y + Math.sin(a) * d);
         const s = clearance(x, y, r, parentId, ctx);
@@ -320,7 +357,7 @@ export class TreeLayout {
         if (s > bestScore) { bestScore = s; bx = x; by = y; }
       }
       if (!found && !mustPlace) return false;
-      if (parentId !== ROOT) this.headingCache.set(c.id, Math.atan2(by - p.y, bx - p.x));
+      if (!isSurface(parentId)) this.headingCache.set(c.id, Math.atan2(by - p.y, bx - p.x));
     }
     // once the turn is sealed its length is final — freeze the spot so it never drifts
     if (c.done) this.posCache.set(c.id, { x: bx, y: by });
@@ -369,22 +406,38 @@ function clearance(x: number, y: number, r: number, parentId: string, ctx: Ctx):
   return worst === Infinity ? 1 : worst;
 }
 
-function orderLineages(bugs: ColonySnapshot["bugs"], queenId: string | undefined, antHub: Map<string, string>): string[] {
+/** Depth-first: the queen's WHOLE subtree first, then each later top-level session with
+ *  its whole subtree, so the warren's width is fully known before the next session's hole
+ *  is sited off to the side. (antHub is unused now but kept for the call site's signature.) */
+function orderLineages(bugs: ColonySnapshot["bugs"], queenId: string | undefined, _antHub: Map<string, string>): string[] {
+  const kids = new Map<string, string[]>();
+  for (const b of bugs) if (b.parentId) (kids.get(b.parentId) ?? kids.set(b.parentId, []).get(b.parentId)!).push(b.id);
   const order: string[] = [];
-  const pending = new Set(bugs.map((b) => b.id));
-  if (queenId && pending.has(queenId)) { order.push(queenId); pending.delete(queenId); }
-  let guard = 0;
-  while (pending.size && guard++ < 1000) {
-    let moved = false;
-    for (const b of bugs) {
-      if (!pending.has(b.id)) continue;
-      const ready = !b.parentId || (b.parentId && antHub.has(b.parentId) && order.includes(b.parentId));
-      if (ready) { order.push(b.id); pending.delete(b.id); moved = true; }
-    }
-    if (!moved) break;
-  }
-  for (const id of pending) order.push(id);
+  const seen = new Set<string>();
+  const visit = (id: string) => {
+    if (seen.has(id)) return;
+    seen.add(id); order.push(id);
+    for (const k of kids.get(id) ?? []) visit(k); // …then its subagents (and theirs)
+  };
+  if (queenId) visit(queenId);                       // the founding queen + her subtree
+  for (const b of bugs) if (!b.parentId) visit(b.id); // each other top-level session + its subtree
+  for (const b of bugs) visit(b.id);                  // any orphan (parent missing) — append
   return order;
+}
+
+/** The x-extent of everything placed so far (chamber edges), for siting the next hole. */
+function xSpan(placed: Placed[]): { minX: number; maxX: number } {
+  let minX = 0, maxX = 0;
+  for (const p of placed) { minX = Math.min(minX, p.x - p.r); maxX = Math.max(maxX, p.x + p.r); }
+  return { minX, maxX };
+}
+
+/** The placed chamber nearest a point — the stitch target for a new session's connector. */
+function nearestPlaced(pt: { x: number; y: number } | undefined, placed: Placed[]): Placed | undefined {
+  if (!pt) return undefined;
+  let best: Placed | undefined, bd = Infinity;
+  for (const q of placed) { const d = Math.hypot(q.x - pt.x, q.y - pt.y); if (d < bd) { bd = d; best = q; } }
+  return best;
 }
 
 /** Merge trivial finished turns into their predecessor instead of digging a room. */

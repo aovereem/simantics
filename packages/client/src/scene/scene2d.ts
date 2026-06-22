@@ -368,8 +368,12 @@ export class Scene {
           ctx.beginPath(); ctx.ellipse(sx - r * 0.3, surf - r * 0.5, r * 0.34, r * 0.26, 0, 0, Math.PI * 2); ctx.fill();
         }
       }
-      const hx = this.cam.x; // world x=0
-      ctx.fillStyle = COL.hole; ctx.beginPath(); ctx.ellipse(hx, surf, 9 * z, 4 * z, 0, 0, Math.PI * 2); ctx.fill();
+      // one entrance per session — the queen's central hole plus each later session's own
+      ctx.fillStyle = COL.hole;
+      for (const h of this.tree?.holes ?? [{ x: 0, y: 0 }]) {
+        const hx = this.cam.x + h.x * z;
+        ctx.beginPath(); ctx.ellipse(hx, surf, 9 * z, 4 * z, 0, 0, Math.PI * 2); ctx.fill();
+      }
     }
   }
 

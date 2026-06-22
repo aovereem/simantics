@@ -1,6 +1,6 @@
 import type { Caste } from "@simantics/shared";
 import type { AntDot, CNode, ForageInfo, Pt, Tree, Tunnel } from "./tree.js";
-import { SURFACE } from "./tree.js";
+import { SURFACE, isSurface } from "./tree.js";
 import { cropTarget, CROP_REGROW, CROP_SEED, LEAF_YIELD, clamp } from "./layout.js";
 
 /**
@@ -162,7 +162,7 @@ export class ColonySim {
   private alarm = false;                    // a session is STUCK (hit an error, not recovered) — its garden blights + soldiers rush to defend the frontier
   private meta = {
     bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 },
-    newest: null as Pt | null, hole: { x: 0, y: 0 },
+    newest: null as Pt | null, hole: { x: 0, y: 0 }, holes: [{ x: 0, y: 0 }] as Pt[],
   };
 
   /** The colony's distress flag (a stuck session) — set from the snapshot's alarm. */
@@ -170,7 +170,7 @@ export class ColonySim {
 
   /** Fold a fresh blueprint in: add any newly-dug chambers/tunnels, update sizes. */
   sync(bp: Tree): void {
-    this.meta = { bounds: bp.bounds, newest: bp.newest, hole: bp.hole };
+    this.meta = { bounds: bp.bounds, newest: bp.newest, hole: bp.hole, holes: bp.holes };
     this.activeId = bp.newestId ?? null;
     this.activeTs = bp.newestTs ?? 0;
     this.harvest = bp.harvest ?? 0;
@@ -198,6 +198,9 @@ export class ColonySim {
         else if (!this.cham.get(t.toId)?.revealed) { ex.pts = t.pts; ex.len = pathLen(t.pts); } // frontier tunnel keeps extending until its room is dropped
       }
     }
+    // connectors/cross-links carve in as soon as both their rooms are open (they're
+    // timeless plumbing, not work) — covers sessions that arrive live, after the boot fill.
+    for (const t of this.cross.values()) if (t.carve < 1 && this.cham.get(t.fromId)?.revealed && this.cham.get(t.toId)?.revealed) t.carve = 1;
     this.buildAdj();
     if (!this.booted) { this.fastForward(); this.booted = true; this.readsSeen = bp.nodes.reduce((s, n) => s + (n.reads ?? 0), 0); }
     this.syncForages(bp.forages);
@@ -347,7 +350,7 @@ export class ColonySim {
       const a = this.adj.get(id) ?? []; a.push(nbr); this.adj.set(id, a);
     };
     const both = (t: STun) => {
-      if (t.fromId !== SURFACE) link(t.fromId, { pts: t.pts, other: t.toId, tun: t });
+      if (!isSurface(t.fromId)) link(t.fromId, { pts: t.pts, other: t.toId, tun: t });
       link(t.toId, { pts: [...t.pts].reverse(), other: t.fromId, tun: t });
     };
     for (const t of this.tun.values()) both(t);
@@ -392,7 +395,7 @@ export class ColonySim {
       if (this.cham.get(id)?.revealed) { this.revealIdx++; continue; } // already up (fast-forwarded)
       const t = this.tun.get(id);
       if (!t) { this.revealIdx++; continue; }
-      const ready = t.fromId === SURFACE || this.cham.get(t.fromId)?.revealed;
+      const ready = isSurface(t.fromId) || this.cham.get(t.fromId)?.revealed;
       if (!ready) break;
       const start = t.pts[0];
       const c = this.cham.get(id)!;
@@ -836,7 +839,7 @@ export class ColonySim {
       });
     }
     const flora = this.flora.map((p) => ({ name: FLORA_STAGES[p.type][p.stage], x: p.x }));
-    return { nodes, tunnels, ants, flora, forages: [], leaves: this.leaves, hole: this.meta.hole, newest: this.meta.newest, bounds: { minX, maxX, minY, maxY }, larder: this.larder, pile: this.pile, antsTotal: this.ants.length + this.foragersBorn, leavesTotal: this.leavesTotal };
+    return { nodes, tunnels, ants, flora, forages: [], leaves: this.leaves, hole: this.meta.hole, holes: this.meta.holes, newest: this.meta.newest, bounds: { minX, maxX, minY, maxY }, larder: this.larder, pile: this.pile, antsTotal: this.ants.length + this.foragersBorn, leavesTotal: this.leavesTotal };
   }
 }
 
