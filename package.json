@@ -1,6 +1,6 @@
 {
   "name": "simantics",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "private": true,
   "description": "A living backyard colony that grows while your agents work.",
   "license": "MIT",

@@ -504,11 +504,21 @@ export class Scene {
     return sx > -pad && sx < this.vw + pad && sy > -pad && sy < this.vh + pad;
   }
 
+  /** Does a tunnel's SPAN overlap the viewport? Tests the bounding box of its endpoints,
+   *  not just the endpoints themselves — else a long tunnel crossing the view with BOTH
+   *  ends off-screen would cull wrongly and vanish at certain zooms. */
+  private spanInView(ax: number, ay: number, bx: number, by: number, r: number): boolean {
+    const z = this.cam.z, pad = r * z + 48;
+    const x0 = Math.min(ax, bx) * z + this.cam.x, x1 = Math.max(ax, bx) * z + this.cam.x;
+    const y0 = Math.min(ay, by) * z + this.cam.y, y1 = Math.max(ay, by) * z + this.cam.y;
+    return x1 > -pad && x0 < this.vw + pad && y1 > -pad && y0 < this.vh + pad;
+  }
+
   private drawColony(ctx: CanvasRenderingContext2D, t: Tree): void {
     // each tunnel is only drawn as far as it's been carved (carve 0..1); skip the ones
     // whose whole span sits off-screen so panning a big colony stays cheap.
     const paths = t.tunnels
-      .filter((tn) => this.inView(tn.pts[0].x, tn.pts[0].y, tn.w) || this.inView(tn.pts[tn.pts.length - 1].x, tn.pts[tn.pts.length - 1].y, tn.w))
+      .filter((tn) => { const a = tn.pts[0], b = tn.pts[tn.pts.length - 1]; return this.spanInView(a.x, a.y, b.x, b.y, tn.w); })
       .map((tn) => ({ pts: partialPts(tn.pts, tn.carve), w: tn.w }));
     const vis = t.nodes.filter((n) => !n.hung && this.inView(n.x, n.y, n.r + 4)); // on-screen chambers only; a hung turn is just its trailing tunnel — no chamber
 
