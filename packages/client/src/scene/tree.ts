@@ -133,6 +133,7 @@ export class TreeLayout {
       const chambers = mergeTrivial(b.tasks, b.id, b.caste);
       if (!chambers.length) continue;
       chambers[0].isHub = true;
+      chambers[0].blocked = false; // the entry hub is a junction (shaft + tunnels pass through) — never a dead-end boulder, which would wall off its own nest
       if (b.id === queenId) chambers[0].isQueen = true;
       lineages.set(b.id, chambers);
       antHub.set(b.id, chambers[0].id);
