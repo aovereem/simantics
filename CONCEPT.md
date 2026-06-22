@@ -80,10 +80,10 @@ borrowed shape.
   circus. Inspired by the film's mixed-bug, peaceful, found-object spirit; copying
   none of its designs.
 - **Top-down** single camera. Tunnels = darkening trails under translucent grass.
-  (Closest to the original, cheapest to build, no projection conflict.)
+  (Cheapest to build, no projection conflict.)
 - **Horizontal bottom dock.** Agrees with the projection — wide lawn, left-to-right trails.
-- Reuse the original's **data-layer architecture** (watcher → fact → per-session
-  state machine → snapshot → WebSocket → render). Rebuild it as ours.
+- A clean **data-layer architecture** (watcher → fact → per-session state machine →
+  snapshot → WebSocket → render): the server says *what*, the client decides *where*.
 - Runs **locally** — it reads your `~/.claude` transcripts off disk. Not hosted.
 
 ## Decisions still open

@@ -65,6 +65,9 @@ interface Session {
 export class Colony {
   private sessions = new Map<string, Session>();
 
+  /** persistent = a project/dir-scoped colony: keep every session, never auto-prune. */
+  constructor(private persistent = false) {}
+
   /**
    * Dump the FULL internal state (not the rendered snapshot view) so a restart can
    * keep accumulating exactly where it left off. The only non-JSON piece is the
@@ -176,7 +179,7 @@ export class Colony {
 
     for (const s of this.sessions.values()) {
       const age = now - s.lastActiveTs;
-      if (age > GONE_MS) {
+      if (!this.persistent && age > GONE_MS) { // scoped colonies persist; the global view prunes idle sessions
         this.sessions.delete(s.id);
         continue;
       }

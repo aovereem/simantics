@@ -14,15 +14,25 @@ quiet warren you can glance at out of the corner of your eye.
 
 ## Run it
 
+Run it from **inside the repo you want to watch** — the colony is that project's:
+
 ```bash
-npx simantics          # watch your ~/.claude sessions — opens the colony in your browser
+cd your-project
+npx simantics          # watch THIS project — opens the colony in your browser
 npx simantics --demo   # a synthetic colony, no real sessions needed
 ```
 
-Options: `--port <n>` (default 4317) · `--no-open` · `--demo` · `--transcripts <dir>`
+By default it watches the current project's transcripts and **keeps all of its work** —
+the colony reflects everything your agents have ever done in this repo (it doesn't fade).
+To change the scope:
 
-By default it watches `~/.claude/projects`. Point `--transcripts <dir>` at another
-location to visualize a different Claude CLI's session logs (same transcript format).
+```bash
+npx simantics --all                 # the global backyard: every project at once (recent, auto-pruned)
+npx simantics --project <path>      # a specific repo, from anywhere
+npx simantics --transcripts <dir>   # a raw transcript dir (e.g. another Claude CLI's logs)
+```
+
+Options: `--port <n>` (default 4317) · `--no-open` · `--demo` · `--all` · `--project <path>` · `--transcripts <dir>`
 
 It runs a local server on `127.0.0.1`, opens a colony view, and **exits when you close
 the tab**. Close it and reopen whenever — it restores the colony and catches up on

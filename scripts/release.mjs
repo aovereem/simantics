@@ -69,15 +69,21 @@ of the soil that digs, forages, and farms as your agents work.
 
 ## Usage
 
-    npx simantics          # watch your ~/.claude sessions, then open the printed URL
-    npx simantics --open   # ...and open the browser for you
+Run it from inside the repo you want to watch — the colony is that project's, and keeps
+all of its work:
+
+    cd your-project
+    npx simantics          # watch THIS project, then open the colony in your browser
     npx simantics --demo   # a synthetic colony, no sessions needed
 
-**Options:** \`--port <n>\` (default 4317) · \`--no-open\` · \`--demo\` · \`--transcripts <dir>\`
+    npx simantics --all                 # the global backyard: every project (recent, pruned)
+    npx simantics --project <path>      # a specific repo
+    npx simantics --transcripts <dir>   # a raw dir (e.g. another Claude CLI's logs)
 
-Watches \`~/.claude/projects\` by default; \`--transcripts <dir>\` points it at another
-Claude CLI's session logs. Runs a local server on 127.0.0.1 and serves a colony view in
-your browser. Read-only — it only watches transcripts, never writes to them.
+**Options:** \`--port <n>\` (default 4317) · \`--no-open\` · \`--demo\` · \`--all\` · \`--project <path>\` · \`--transcripts <dir>\`
+
+Runs a local server on 127.0.0.1 and serves a colony view in your browser. Read-only —
+it only watches transcripts, never writes to them.
 `
 );
 

@@ -19,7 +19,7 @@ export class TranscriptWatcher {
   private watcher?: FSWatcher;
   private offsets = new Map<string, number>();
 
-  constructor(private root: string = DEFAULT_TRANSCRIPT_GLOB) {}
+  constructor(private root: string = DEFAULT_TRANSCRIPT_GLOB, private loadAll = false) {}
 
   /** The watched transcript root — used to key the disk cache. */
   get watchRoot(): string {
@@ -87,7 +87,7 @@ export class TranscriptWatcher {
       // Skip files we've never touched that haven't changed in a while — their
       // sessions are long gone (the colony would prune them anyway). When such a
       // file is appended to (re-activated), its mtime is fresh and we pick it up.
-      if (!this.offsets.has(path) && Date.now() - st.mtimeMs > RECENT_MS) return;
+      if (!this.loadAll && !this.offsets.has(path) && Date.now() - st.mtimeMs > RECENT_MS) return; // scoped → load the whole history; global → recent only
       size = st.size;
     } catch {
       return;
