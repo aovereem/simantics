@@ -55,6 +55,9 @@ const manifest = {
   dependencies: { fastify: "^5.1.0", chokidar: "^4.0.1", ws: "^8.18.0" },
   keywords: ["claude-code", "ants", "colony", "terminal", "visualizer"],
   license: "MIT",
+  repository: { type: "git", url: "git+https://github.com/aovereem/simantics.git" }, // required for provenance on trusted publishing
+  homepage: "https://github.com/aovereem/simantics#readme",
+  bugs: { url: "https://github.com/aovereem/simantics/issues" },
 };
 writeFileSync(join(REL, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
 
