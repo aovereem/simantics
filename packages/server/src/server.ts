@@ -50,6 +50,8 @@ export interface ServeOptions {
   /** Persist mode (project/dir scope): load the WHOLE history and never auto-prune idle
    *  sessions — the colony reflects all the work. Off = the global backyard (recent + pruned). */
   persistent?: boolean;
+  /** Short HUD tag for which colony this is — a repo name, "all projects", or "demo". */
+  scope?: string;
   /** Called once the last browser disconnects and doesn't return — used to exit when
    *  the window closes. Only ever fires when we're serving the client (packaged). */
   onIdleExit?: () => void;
@@ -86,7 +88,7 @@ export async function serve(opts: ServeOptions): Promise<{ url: string; close: (
     clients.add(ws);
     armed = true;
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = undefined; } // a reconnect cancels a pending exit
-    send(ws, { type: "hello", data: { version: VERSION, demo: opts.demo } });
+    send(ws, { type: "hello", data: { version: VERSION, demo: opts.demo, scope: opts.scope ?? "" } });
     ws.on("close", () => {
       clients.delete(ws);
       // the browser closed → exit if it doesn't come back (a reload reconnects within the grace)

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { serve } from "./server.js";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, resolve, basename } from "node:path";
 
 interface Args {
   port: number;
@@ -57,11 +57,12 @@ async function main() {
   // auto-pruned). `--project <path>` / `--transcripts <dir>` aim it elsewhere.
   let watchDir: string | undefined; // undefined → the default ~/.claude/projects (all)
   let persistent = false;
-  let label: string;
-  if (args.demo) { label = "demo mode — fake sessions"; }
-  else if (args.all) { watchDir = undefined; label = "watching all projects"; }
-  else if (args.transcripts) { watchDir = args.transcripts; persistent = true; label = `watching ${args.transcripts}`; }
-  else { const repo = resolve(args.project ?? process.cwd()); watchDir = projectDir(repo); persistent = true; label = `watching this project · ${repo}`; }
+  let label: string;  // the long terminal banner line
+  let scope: string;  // the short HUD tag — which colony you're looking at
+  if (args.demo) { label = "demo mode — fake sessions"; scope = "demo"; }
+  else if (args.all) { watchDir = undefined; label = "watching all projects"; scope = "all projects"; }
+  else if (args.transcripts) { watchDir = args.transcripts; persistent = true; label = `watching ${args.transcripts}`; scope = basename(args.transcripts); }
+  else { const repo = resolve(args.project ?? process.cwd()); watchDir = projectDir(repo); persistent = true; label = `watching this project · ${repo}`; scope = basename(repo); }
 
   let closeServer: () => Promise<void> = async () => {};
   let closing = false;
@@ -78,6 +79,7 @@ async function main() {
     demo: args.demo,
     transcriptsDir: watchDir,
     persistent,
+    scope,
     onIdleExit: () => shutdown(`\n  🐜  the colony's window closed — see you next time.\n`),
   });
   closeServer = close;

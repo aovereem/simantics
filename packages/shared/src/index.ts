@@ -162,7 +162,7 @@ export interface ColonySnapshot {
 /** Messages the server pushes over the WebSocket. */
 export type ServerMessage =
   | { type: "snapshot"; data: ColonySnapshot }
-  | { type: "hello"; data: { version: string; demo: boolean } };
+  | { type: "hello"; data: { version: string; demo: boolean; scope: string } };
 
 export const WS_PATH = "/colony";
 

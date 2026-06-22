@@ -6,6 +6,7 @@ import { ColonySim } from "./scene/sim.js";
 
 const el = {
   stage: document.getElementById("stage")!,
+  scope: document.getElementById("hud-scope")!,
   ants: document.getElementById("stat-ants")!,
   rooms: document.getElementById("stat-rooms")!,
   food: document.getElementById("stat-food")!,
@@ -37,6 +38,9 @@ let centered = false;
 let vw = window.innerWidth, vh = window.innerHeight;
 
 connect({
+  onHello: ({ scope }) => {
+    el.scope.textContent = scope ? `· ${scope}` : ""; // which colony — repo name / "all projects" / "demo"
+  },
   onStatus: (s) => {
     el.status.textContent = s === "live" ? "live" : s === "lost" ? "reconnecting…" : "connecting…";
     el.status.className = s === "live" ? "live" : "";
