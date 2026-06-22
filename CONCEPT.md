@@ -1,111 +1,85 @@
-# Simantics — concept
+# simantics — concept
 
-> The name carries two readings that stack rather than compete. The front door is
-> a tiny bug colony sim — warm, playful, instantly gets the concept. Underneath is
-> the wink: agents → ants (the same root Anthropic plays on). A name that works
-> whether or not you catch the joke. npm package `simantics` is available.
+> The name stacks three readings: **SimAnt** (it's an ant-colony sim), **semantics**
+> (it watches the meaning of your code as it changes), and **antics** (agents → ants —
+> the root Anthropic plays on). Works whether or not you catch all three.
 
-**A living backyard colony that grows while your agents work.** Every Claude Code
-session becomes an ant in the grass. The tool it runs decides what the ant does;
-subagents become workers streaming out of the nest; tokens become crumbs hauled
-underground. A calm, glanceable strip docked to the bottom of your screen that
-breathes in real time as you code. No combat, no scores — just a quiet colony
-you can watch out of the corner of your eye.
+**Watch your Claude Code sessions grow into a living ant colony.** A 16-bit cross-section
+of the soil, in your browser, that digs, forages, and farms in real time as your agents
+work. Every session is a colony; every turn carves a chamber; the code you ship grows the
+fungus the ants harvest. No combat, no scores — just a quiet warren you can glance at out
+of the corner of your eye.
 
-The architecture is a clean split — a theme-agnostic data layer feeding a themed
-render layer — and the world, the metaphor, the protocol, and the art are all ours.
+The architecture is a clean split — a theme-agnostic data layer feeding a themed render
+layer — and the world, the metaphor, the protocol, and the art are all ours.
 
 ---
 
 ## The world
 
-A top-down patch of backyard. Tufted, semi-transparent grass over dark soil.
-Found objects sit in the grass — a bottle cap, a fallen leaf, a sunflower seed, a
-dewdrop. Beneath the surface, tunnels spread as the colony does more work, drawn as
-trails that darken with depth. One camera, top-down, depth faked with shading. No
-second projection.
+An **underground cross-section** — a side view cut into the earth. A thin band of grass
+and found foliage on top; beneath it, distinct soil horizons (topsoil, clay, grit,
+bedrock) that scroll as the colony grows. The colony is dug into the soil: the queen's
+chamber near the surface, tunnels meandering down and out, fresh chambers carved deeper
+as the session does more work. One camera; the depth is real, not faked.
 
-Docked as a **horizontal strip along the bottom of the screen.** Wide and short,
-which is exactly a lawn cross-strip: grass band on top, a shallow soil band beneath
-showing tunnels through the bare patches. Trails run left-to-right. Foragers leave
-the dark nest, cross the grass to an object, and haul a crumb home.
+It runs as a browser view you keep in the corner of your screen — it breathes as you
+code, then idles quietly when you stop.
 
 ## The colony (mapping)
 
-The backbone is a real eusocial colony — that's what made insects the right call.
-A session spawning subagents *is* a queen spawning workers, not a metaphor for it.
+A session spawning subagents *is* a queen spawning workers — eusociality is the backbone,
+not a metaphor laid over it.
 
-| Concept              | In the backyard                                              |
-| -------------------- | ----------------------------------------------------------- |
-| Session              | An ant                                                      |
-| Main / orchestrator  | The **queen** — stays in the nest underground               |
-| Subagents (Task)     | **Workers** spawned from the queen, streaming up to the grass |
-| File edits (Edit/Write) | **Building** — extending a tunnel, hauling material      |
-| File reads (Read/Grep/Glob) | **Foraging** — crossing the grass, gathering crumbs  |
-| Web search / fetch   | **Forager** heading to a glowing object (a dewdrop catching light) and back |
-| Bash / terminal      | **Digging** underground                                     |
-| Tests / lint         | **Soldiers** patrolling the perimeter (warriors, kept peaceful — guarding, not fighting) |
-| Thinking             | Ant pauses, antennae twitch                                 |
-| Tokens               | **Crumbs** hauled to the food store; the store grows with throughput |
-| A project / repo     | A colony (multiple repos → multiple mounds, later)          |
+| Your agent…                | …in the colony                                          |
+| -------------------------- | ------------------------------------------------------- |
+| A Claude Code session      | A **colony** — a queen and the chambers she digs        |
+| A turn (prompt → reply)    | A fresh **chamber**, carved deeper into the soil        |
+| Subagents (Task)           | **Workers** spawned into their own chambers             |
+| Edit / Write (the diff)    | **Fungus** blooms in that chamber — more code, more fungus |
+| Read / Grep / Glob         | **Scouts** forage for leaves that feed the fungus       |
+| WebSearch / WebFetch       | A **forager** treks up to the surface and back          |
+| Tests / lint / recovery    | A **soldier** is minted and patrols the warren          |
+| Deletions                  | The chamber **blights** sickly-olive; ants weed it      |
+| A stuck session / error    | **Rain** — the colony takes cover, soldiers defend the frontier |
+| Tokens                     | **Crumbs** hauled underground                           |
 
-## Behaviors (the state machine, kept from the original's vocabulary)
+## The food economy
 
-`thinking` · `foraging` · `digging` · `building` · `patrolling` · `hauling` ·
-`resting` · `idle` · `returning`
+The heart of it is the real leafcutter cycle, driven entirely by what your agents do:
 
-Surface is where discovery happens (foraging, returning with crumbs). Underground
-is where the colony *is* (queen, nest, stored food, spawned workers). Out-and-working
-plays on top; nest / rest / idle / home plays below.
+1. **Forage** — reading code (Read/Grep/Glob) and web fetches send foragers up for **leaves**.
+2. **Farm** — leaves grow **fungus** in the chambers where you wrote code (sized to the diff).
+3. **Harvest** — workers gather ripe fungus and haul it to the queen's **pile**.
+4. **Store** — **repletes** (living-larder ants) swell with the surplus for lean spells.
+5. **Eat** — the colony grazes the gardens; the HUD's **health** reading is how well-fed it is.
 
-## The "uh oh" beat
+A busy session is a thriving farm; a quiet one lives off its stores; a planning-heavy
+session is all foragers and full larders. Every quantity traces to a real signal in the
+transcript — nothing is invented.
 
-The original uses a bird's shadow. In a backyard the native version is a **passing
-shadow** — a cloud, a hand, a watering can. On an error or a stuck session, the
-shadow crosses, the colony freezes and scatters, then resumes once it lifts. Same
-beat, no combat, belongs to the world.
+## Scope & lifecycle
 
-## What's genuinely new vs. the original
+Run it **inside a repo** and the colony is *that project's*, keeping **all of its work** —
+every session you've run there, each as its own nest, persisting (it doesn't fade). `--all`
+opts into the global backyard: every project at once, recent activity, idle nests pruned.
 
-Most of this is a reskin of a proven idea, and that's fine. The one real *system*
-we're adding is the **two-layer world**: a translucent grass surface over a soil
-band with tunnels that accumulate as the session does work. The tunnel network is
-our version of the original's filling storehouse — a visible record of activity
-over the session. Build that deliberately; everything else is art on top of a
-borrowed shape.
+## Invariants
 
-## Decisions locked
-
-- Insect colony in a backyard, **not** indoor junk and **not** the *A Bug's Life*
-  circus. Inspired by the film's mixed-bug, peaceful, found-object spirit; copying
-  none of its designs.
-- **Top-down** single camera. Tunnels = darkening trails under translucent grass.
-  (Cheapest to build, no projection conflict.)
-- **Horizontal bottom dock.** Agrees with the projection — wide lawn, left-to-right trails.
-- A clean **data-layer architecture** (watcher → fact → per-session state machine →
-  snapshot → WebSocket → render): the server says *what*, the client decides *where*.
-- Runs **locally** — it reads your `~/.claude` transcripts off disk. Not hosted.
-
-## Decisions still open
-
-- **Grass-to-soil ratio** in the strip — half/half, or surface-heavy with a shallow
-  tunnel band? Depends on whether the underground is the star or just texture.
-- **Always-on-top dock**: a desktop wrapper (Tauri preferred, Electron fallback) vs.
-  a manually-placed browser window for now. The scaffold runs in a browser; the
-  wrapper is a later layer that points at the same local server.
-- Art source: procedural placeholders ship today; real sprites (hand-drawn, CC0
-  pack, or generated) come later. Constraint: grass must be patchy/translucent or
-  the tunnels never show.
+- **Passive.** It only reads and aggregates transcripts that already exist, and draws them.
+  It never summarizes, calls a model, instruments the agent, or invents work.
+- **What, never where.** The server reports *what* a session did (tokens, tools, diff
+  counts, spawned workers); the client owns *all* the geometry — every ant, tunnel, stratum.
+- **Local & read-only.** Binds `127.0.0.1`, tails `~/.claude` transcripts off disk, writes
+  nothing back, sends nothing anywhere.
+- **Lightweight.** A tiny dependency footprint; a single self-contained `npx` command.
 
 ## Stack
 
-A small npm-workspaces monorepo. Borrowed shape, our code.
+A small npm-workspaces monorepo:
 
-| Package           | Stack                          | Job                                                     |
-| ----------------- | ------------------------------ | ------------------------------------------------------- |
-| `packages/shared` | TypeScript                     | Protocol types — `Fact`, `BugSnapshot`, `ColonySnapshot` |
-| `packages/server` | Node + Fastify + `ws` + chokidar | Tail transcripts, parse facts, run the state machine, broadcast snapshots, demo mode, CLI |
-| `packages/client` | Vite + PixiJS v8               | The backyard scene, the strip, the HUD                  |
-
-Privacy carries over from the original by design: server binds `127.0.0.1` only,
-transcripts are read locally and read-only, nothing is written back or sent anywhere.
+| Package           | Stack                            | Job                                                    |
+| ----------------- | -------------------------------- | ------------------------------------------------------ |
+| `packages/shared` | TypeScript                       | The protocol — `Fact`, `BugSnapshot`, `ColonySnapshot`  |
+| `packages/server` | Node + Fastify + `ws` + chokidar | Tail transcripts → parse → colony state machine → snapshots, demo, CLI |
+| `packages/client` | Vite + 2D canvas                 | The pixel-art colony cross-section + HUD               |
