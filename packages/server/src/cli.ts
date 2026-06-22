@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 import { serve } from "./server.js";
+import { homedir } from "node:os";
+import { resolve } from "node:path";
 
 interface Args {
   port: number;
   demo: boolean;
   noOpen: boolean;
+  transcripts?: string; // a custom transcript dir to watch (default ~/.claude/projects)
 }
 
 function parseArgs(argv: string[]): Args {
@@ -15,6 +18,10 @@ function parseArgs(argv: string[]): Args {
     else if (a === "--no-open") args.noOpen = true;
     else if (a === "--open") args.noOpen = false; // opening is the default; accepted for clarity
     else if (a === "--port") args.port = Number(argv[++i]) || args.port;
+    else if (a === "--transcripts" || a === "--dir") {
+      const dir = argv[++i];
+      if (dir) args.transcripts = resolve(dir.startsWith("~") ? dir.replace(/^~/, homedir()) : dir);
+    }
   }
   return args;
 }
@@ -46,11 +53,14 @@ async function main() {
   const { url, close, servesClient } = await serve({
     port: args.port,
     demo: args.demo,
+    transcriptsDir: args.transcripts,
     onIdleExit: () => shutdown(`\n  🐜  the colony's window closed — see you next time.\n`),
   });
   closeServer = close;
 
-  const banner = args.demo ? "demo mode — fake sessions" : "watching ~/.claude transcripts";
+  const banner = args.demo ? "demo mode — fake sessions"
+    : args.transcripts ? `watching ${args.transcripts}`
+      : "watching ~/.claude transcripts";
   console.log(`\n  🐜  simantics — a backyard colony of your agents`);
   console.log(`      ${banner}`);
   console.log(`      ${url}\n`);

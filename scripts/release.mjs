@@ -73,10 +73,11 @@ of the soil that digs, forages, and farms as your agents work.
     npx simantics --open   # ...and open the browser for you
     npx simantics --demo   # a synthetic colony, no sessions needed
 
-**Options:** \`--port <n>\` (default 4317) · \`--open\` · \`--demo\`
+**Options:** \`--port <n>\` (default 4317) · \`--no-open\` · \`--demo\` · \`--transcripts <dir>\`
 
-Runs a local server on 127.0.0.1 and serves a colony view in your browser. Read-only —
-it only watches transcripts, never writes to them.
+Watches \`~/.claude/projects\` by default; \`--transcripts <dir>\` points it at another
+Claude CLI's session logs. Runs a local server on 127.0.0.1 and serves a colony view in
+your browser. Read-only — it only watches transcripts, never writes to them.
 `
 );
 

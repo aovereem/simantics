@@ -19,7 +19,10 @@ npx simantics          # watch your ~/.claude sessions — opens the colony in y
 npx simantics --demo   # a synthetic colony, no real sessions needed
 ```
 
-Options: `--port <n>` (default 4317) · `--no-open` · `--demo`
+Options: `--port <n>` (default 4317) · `--no-open` · `--demo` · `--transcripts <dir>`
+
+By default it watches `~/.claude/projects`. Point `--transcripts <dir>` at another
+location to visualize a different Claude CLI's session logs (same transcript format).
 
 It runs a local server on `127.0.0.1`, opens a colony view, and **exits when you close
 the tab**. Close it and reopen whenever — it restores the colony and catches up on

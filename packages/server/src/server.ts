@@ -28,6 +28,9 @@ const MIME: Record<string, string> = {
 export interface ServeOptions {
   port: number;
   demo: boolean;
+  /** A custom transcript dir to watch instead of the default `~/.claude/projects`
+   *  (e.g. to point at another Claude CLI's logs). */
+  transcriptsDir?: string;
   /** Called once the last browser disconnects and doesn't return — used to exit when
    *  the window closes. Only ever fires when we're serving the client (packaged). */
   onIdleExit?: () => void;
@@ -81,7 +84,7 @@ export async function serve(opts: ServeOptions): Promise<{ url: string; close: (
     // Demo state is synthetic and ephemeral — never persisted.
     stopFeed = startDemo((fact) => colony.ingest(fact));
   } else {
-    const watcher = new TranscriptWatcher();
+    const watcher = new TranscriptWatcher(opts.transcriptsDir);
     const root = watcher.watchRoot;
 
     // Restore from the disk cache if it's present + valid: hydrate the colony and
