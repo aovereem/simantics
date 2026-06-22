@@ -2,7 +2,7 @@
 
 **Watch your Claude Code sessions grow into a living ant colony.**
 
-[![npm version](https://img.shields.io/npm/v/antics.svg)](https://www.npmjs.com/package/antics)
+[![npm version](https://img.shields.io/npm/v/simantics.svg)](https://www.npmjs.com/package/simantics)
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 
 A 16-bit cross-section of the soil, in your browser, that digs, forages, and farms in
@@ -15,8 +15,8 @@ quiet warren you can glance at out of the corner of your eye.
 ## Run it
 
 ```bash
-npx antics          # watch your ~/.claude sessions — opens the colony in your browser
-npx antics --demo   # a synthetic colony, no real sessions needed
+npx simantics          # watch your ~/.claude sessions — opens the colony in your browser
+npx simantics --demo   # a synthetic colony, no real sessions needed
 ```
 
 Options: `--port <n>` (default 4317) · `--no-open` · `--demo`

@@ -3,7 +3,7 @@
  * client (where things go and how the colony looks). The server only ever says
  * WHAT a session is doing; the client decides WHERE. Keep coordinates out of here.
  *
- * Antics is a passive effort-visualizer: everything below is read/aggregated from
+ * Simantics is a passive effort-visualizer: everything below is read/aggregated from
  * the transcript that already exists. Nothing here implies extra work, generation,
  * or instrumentation of the agent.
  */

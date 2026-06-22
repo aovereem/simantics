@@ -1,4 +1,4 @@
-import type { Fact, FactKind } from "@antics/shared";
+import type { Fact, FactKind } from "@simantics/shared";
 
 /**
  * Claude Code writes JSONL transcripts under ~/.claude/projects/<slug>/<uuid>.jsonl.

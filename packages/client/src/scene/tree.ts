@@ -1,4 +1,4 @@
-import type { Caste, ColonySnapshot, TaskSnapshot } from "@antics/shared";
+import type { Caste, ColonySnapshot, TaskSnapshot } from "@simantics/shared";
 import { chamberRadius, relLength, SEG_BASE, TRIVIAL_TOKENS, clamp } from "./layout.js";
 
 export type EggState = "none" | "egg" | "hatched";

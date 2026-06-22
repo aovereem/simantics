@@ -1,5 +1,5 @@
 {
-  "name": "antics",
+  "name": "simantics",
   "version": "0.0.1",
   "private": true,
   "description": "A living backyard colony that grows while your agents work.",
@@ -10,14 +10,14 @@
     "packages/client"
   ],
   "scripts": {
-    "build:shared": "npm run build -w @antics/shared",
-    "build": "npm run build:shared && npm run build -w @antics/client && npm run build -w @antics/server && npm run copy:client",
+    "build:shared": "npm run build -w @simantics/shared",
+    "build": "npm run build:shared && npm run build -w @simantics/client && npm run build -w @simantics/server && npm run copy:client",
     "copy:client": "node -e \"require('fs').cpSync('packages/client/dist','packages/server/dist/public',{recursive:true})\"",
     "release": "node scripts/release.mjs",
     "start": "node packages/server/dist/cli.js",
-    "demo": "npm run build:shared && concurrently -k -n server,client -c green,cyan \"npm run demo -w @antics/server\" \"npm run dev -w @antics/client\"",
-    "dev": "npm run build:shared && concurrently -k -n server,client -c green,cyan \"npm run dev -w @antics/server\" \"npm run dev -w @antics/client\"",
-    "server:demo": "npm run build:shared && npm run demo -w @antics/server"
+    "demo": "npm run build:shared && concurrently -k -n server,client -c green,cyan \"npm run demo -w @simantics/server\" \"npm run dev -w @simantics/client\"",
+    "dev": "npm run build:shared && concurrently -k -n server,client -c green,cyan \"npm run dev -w @simantics/server\" \"npm run dev -w @simantics/client\"",
+    "server:demo": "npm run build:shared && npm run demo -w @simantics/server"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

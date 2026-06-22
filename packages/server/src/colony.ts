@@ -5,7 +5,7 @@ import {
   type ColonySnapshot,
   type Fact,
   type TaskSnapshot,
-} from "@antics/shared";
+} from "@simantics/shared";
 
 const IDLE_MS = 30_000; // no facts for this long → resting
 const RETURN_MS = 120_000; // ... this long → heading home

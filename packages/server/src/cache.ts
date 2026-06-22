@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 /**
  * A lightweight disk cache for the colony — the server's OWN file, written under
- * ~/.claude/antics/ (NEVER inside ~/.claude/projects; transcripts stay read-only).
+ * ~/.claude/simantics/ (NEVER inside ~/.claude/projects; transcripts stay read-only).
  * On a restart we hydrate the colony and resume tailing from saved file offsets
  * instead of cold-draining the whole transcript tree from scratch.
  *
@@ -15,7 +15,7 @@ import { join } from "node:path";
 // Bump when the serialized shape changes — an old cache is then ignored, not parsed.
 const CACHE_VERSION = 1;
 
-const CACHE_DIR = join(homedir(), ".claude", "antics");
+const CACHE_DIR = join(homedir(), ".claude", "simantics");
 
 export interface CacheFile {
   version: number;

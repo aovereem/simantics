@@ -1,9 +1,9 @@
-# Antics — concept
+# Simantics — concept
 
 > The name carries two readings that stack rather than compete. The front door is
 > a tiny bug colony sim — warm, playful, instantly gets the concept. Underneath is
 > the wink: agents → ants (the same root Anthropic plays on). A name that works
-> whether or not you catch the joke. npm package `antics` is available.
+> whether or not you catch the joke. npm package `simantics` is available.
 
 **A living backyard colony that grows while your agents work.** Every Claude Code
 session becomes an ant in the grass. The tool it runs decides what the ant does;

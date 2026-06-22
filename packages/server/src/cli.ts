@@ -51,7 +51,7 @@ async function main() {
   closeServer = close;
 
   const banner = args.demo ? "demo mode — fake sessions" : "watching ~/.claude transcripts";
-  console.log(`\n  🐜  antics — a backyard colony of your agents`);
+  console.log(`\n  🐜  simantics — a backyard colony of your agents`);
   console.log(`      ${banner}`);
   console.log(`      ${url}\n`);
 

@@ -1,4 +1,4 @@
-import type { ColonySnapshot } from "@antics/shared";
+import type { ColonySnapshot } from "@simantics/shared";
 import { connect } from "./net.js";
 import { Scene } from "./scene/scene2d.js";
 import { TreeLayout, SURFACE, type AntDot, type CNode, type Tree } from "./scene/tree.js";

@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 
-// Dev server proxies the WebSocket to the local antics server so the client can
+// Dev server proxies the WebSocket to the local simantics server so the client can
 // talk to it on a stable path regardless of port juggling.
 export default defineConfig({
   server: {

@@ -1,4 +1,4 @@
-import type { ColonySnapshot, ServerMessage } from "@antics/shared";
+import type { ColonySnapshot, ServerMessage } from "@simantics/shared";
 
 export interface NetHandlers {
   onSnapshot: (snap: ColonySnapshot) => void;

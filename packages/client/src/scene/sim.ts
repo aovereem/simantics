@@ -1,4 +1,4 @@
-import type { Caste } from "@antics/shared";
+import type { Caste } from "@simantics/shared";
 import type { AntDot, CNode, ForageInfo, Pt, Tree, Tunnel } from "./tree.js";
 import { SURFACE } from "./tree.js";
 import { cropTarget, CROP_REGROW, CROP_SEED, LEAF_YIELD, clamp } from "./layout.js";

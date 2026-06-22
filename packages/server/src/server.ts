@@ -3,7 +3,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { type ServerMessage, WS_PATH } from "@antics/shared";
+import { type ServerMessage, WS_PATH } from "@simantics/shared";
 import { Colony } from "./colony.js";
 import { TranscriptWatcher } from "./watcher.js";
 import { startDemo } from "./demo.js";
@@ -17,7 +17,7 @@ const IDLE_EXIT_MS = 4_000; // when the browser closes (and doesn't reconnect), 
 
 // The built client is copied next to the compiled server (dist/public) at build time.
 // In dev there's no such dir (Vite serves the client + proxies the WS), so we skip this
-// and only serve static when packaged — which is what makes `npx antics` self-contained.
+// and only serve static when packaged — which is what makes `npx simantics` self-contained.
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), "public");
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",

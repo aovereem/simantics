@@ -1,0 +1,34 @@
+name: publish
+
+# Publishes `simantics` to npm via trusted publishing (OIDC) — no tokens, no 2FA codes.
+# Trigger it from the Actions tab ("Run workflow"), or by pushing a v* tag.
+#
+# One-time setup on npmjs.com → the `simantics` package → Settings → Trusted Publisher:
+#   Provider: GitHub Actions · Org/user: aovereem · Repo: simantics
+#   Workflow filename: publish.yml · Allowed action: npm publish
+# (fields are case-sensitive and must match exactly).
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write   # required for OIDC trusted publishing
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm install -g npm@latest   # trusted publishing needs npm >= 11.5.1
+      - run: npm ci
+      - run: npm run release             # builds the self-contained package into release/
+      - run: npm publish                 # OIDC auth is automatic — no NODE_AUTH_TOKEN
+        working-directory: release

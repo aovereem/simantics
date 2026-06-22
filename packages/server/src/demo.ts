@@ -1,4 +1,4 @@
-import type { Fact } from "@antics/shared";
+import type { Fact } from "@simantics/shared";
 
 const PROMPTS = [
   "refactor the auth flow",

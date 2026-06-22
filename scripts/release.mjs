@@ -4,9 +4,9 @@ import { execSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Assemble a clean, self-contained `antics` package for npm into ./release.
+// Assemble a clean, self-contained `simantics` package for npm into ./release.
 // SHIPS ONLY the minified runtime — no source, no design comments, no docs/plans.
-// The server is bundled (with @antics/shared inlined) and minified; the npm runtime
+// The server is bundled (with @simantics/shared inlined) and minified; the npm runtime
 // deps (fastify/chokidar/ws) stay external so npx installs them.
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -23,7 +23,7 @@ mkdirSync(join(REL, "dist"), { recursive: true });
 execSync("npm run build", { cwd: ROOT, stdio: "inherit" });
 
 // 2. bundle the compiled server into ONE minified file (strips every comment), with
-//    @antics/shared inlined and the real npm deps left external.
+//    @simantics/shared inlined and the real npm deps left external.
 await build({
   entryPoints: [join(ROOT, "packages/server/dist/cli.js")],
   bundle: true,
@@ -45,11 +45,11 @@ writeFileSync(idx, html);
 
 // 4. a minimal, user-facing manifest — nothing about how it works or who built it.
 const manifest = {
-  name: "antics",
+  name: "simantics",
   version: VERSION,
   description: "Watch your Claude Code sessions grow into a living ant colony.",
   type: "module",
-  bin: { antics: "dist/cli.js" },
+  bin: { simantics: "dist/cli.js" },
   files: ["dist"],
   engines: { node: ">=18" },
   dependencies: { fastify: "^5.1.0", chokidar: "^4.0.1", ws: "^8.18.0" },
@@ -62,16 +62,16 @@ writeFileSync(join(REL, "package.json"), JSON.stringify(manifest, null, 2) + "\n
 copyFileSync(join(ROOT, "LICENSE"), join(REL, "LICENSE"));
 writeFileSync(
   join(REL, "README.md"),
-  `# antics
+  `# simantics
 
 Watch your Claude Code sessions grow into a living ant colony — a 16-bit cross-section
 of the soil that digs, forages, and farms as your agents work.
 
 ## Usage
 
-    npx antics          # watch your ~/.claude sessions, then open the printed URL
-    npx antics --open   # ...and open the browser for you
-    npx antics --demo   # a synthetic colony, no sessions needed
+    npx simantics          # watch your ~/.claude sessions, then open the printed URL
+    npx simantics --open   # ...and open the browser for you
+    npx simantics --demo   # a synthetic colony, no sessions needed
 
 **Options:** \`--port <n>\` (default 4317) · \`--open\` · \`--demo\`
 

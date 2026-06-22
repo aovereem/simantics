@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { basename } from "node:path";
-import type { Fact } from "@antics/shared";
+import type { Fact } from "@simantics/shared";
 import { parseLine } from "./parser.js";
 
 export const DEFAULT_TRANSCRIPT_GLOB = join(homedir(), ".claude", "projects");
