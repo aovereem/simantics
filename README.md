@@ -1,4 +1,4 @@
-# 🐜 antics
+# 🐜 simantics
 
 **Watch your Claude Code sessions grow into a living ant colony.**
 
