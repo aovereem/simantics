@@ -3,6 +3,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { readFileSync, existsSync } from "node:fs";
 import { join, extname, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createServer } from "node:net";
 import { type ServerMessage, WS_PATH } from "@simantics/shared";
 import { Colony } from "./colony.js";
 import { TranscriptWatcher } from "./watcher.js";
@@ -24,6 +25,21 @@ const MIME: Record<string, string> = {
   ".svg": "image/svg+xml", ".ico": "image/x-icon", ".png": "image/png", ".webmanifest": "application/manifest+json",
   ".woff2": "font/woff2", ".woff": "font/woff", ".json": "application/json", ".map": "application/json",
 };
+
+/** Find the first free port at or above `start`, so a stray process (or a second
+ *  instance) on the default port steps to the next one instead of crashing. */
+async function firstFreePort(start: number, host: string): Promise<number> {
+  for (let p = start; p < start + 20; p++) {
+    const free = await new Promise<boolean>((res) => {
+      const probe = createServer();
+      probe.once("error", () => res(false));
+      probe.once("listening", () => probe.close(() => res(true)));
+      probe.listen(p, host);
+    });
+    if (free) return p;
+  }
+  return start; // give up after 20 — let app.listen surface the real error
+}
 
 export interface ServeOptions {
   port: number;
@@ -60,7 +76,8 @@ export async function serve(opts: ServeOptions): Promise<{ url: string; close: (
     });
   }
 
-  const address = await app.listen({ host: HOST, port: opts.port });
+  const port = await firstFreePort(opts.port, HOST); // step past a busy port instead of crashing
+  const address = await app.listen({ host: HOST, port });
 
   const wss = new WebSocketServer({ server: app.server, path: WS_PATH });
   let armed = false;                          // a browser has connected at least once
