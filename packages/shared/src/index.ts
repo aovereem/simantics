@@ -157,6 +157,8 @@ export interface ColonySnapshot {
   /** total net diff across the colony (Σ max(0, added−removed)) — the standing
    *  crop available to harvest into the larder. */
   harvest: number;
+  /** lifetime leaves foraged (scouts/reads + web fetches) — the persistent HUD leaf count. */
+  leaves: number;
 }
 
 /** Messages the server pushes over the WebSocket. */

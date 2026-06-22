@@ -57,6 +57,7 @@ interface Session {
   label?: string;
   forages: ForageRec[];
   forageSeq: number;
+  forageCount: number; // cumulative web forages (the forages[] list is capped — this isn't), for the persistent leaf tally
   linesAdded: number;
   linesRemoved: number;
   reads: number;
@@ -148,6 +149,7 @@ export class Colony {
         if (isForage(fact.tool)) {
           s.forages.push({ id: `${s.id}#f${s.forageSeq++}`, taskId: `${s.id}#${s.tasks.indexOf(t)}`, startTs: fact.ts });
           if (s.forages.length > 10) s.forages.splice(0, s.forages.length - 10);
+          s.forageCount = (s.forageCount ?? 0) + 1; // ?? for sessions restored from a pre-forageCount cache
         }
         break;
       case "thinking":
@@ -189,6 +191,7 @@ export class Colony {
     const bugs: BugSnapshot[] = [];
     let foodStore = 0;
     let harvest = 0;
+    let leaves = 0;
     let alarm = false;
 
     for (const s of this.sessions.values()) {
@@ -212,6 +215,7 @@ export class Colony {
 
       foodStore += s.totalTokens;
       harvest += Math.max(0, s.linesAdded - s.linesRemoved);
+      leaves += s.reads + (s.forageCount ?? 0); // lifetime foraging — scouts (reads) + web fetches; reads/forageCount persist, so this survives a refresh
       if (s.errored && now - s.erroredSince >= STUCK_MS && age < RETURN_MS) alarm = true;
 
       const tasks: TaskSnapshot[] = s.tasks.map((t, i) => ({
@@ -255,7 +259,7 @@ export class Colony {
       });
     }
 
-    return { ts: now, bugs, foodStore, alarm, harvest };
+    return { ts: now, bugs, foodStore, alarm, harvest, leaves };
   }
 
   private session(id: string, parentId?: string): Session {
@@ -279,6 +283,7 @@ export class Colony {
         erroredSince: 0,
         forages: [],
         forageSeq: 0,
+        forageCount: 0,
         linesAdded: 0,
         linesRemoved: 0,
         reads: 0,

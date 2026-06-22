@@ -171,6 +171,7 @@ export class ColonySim {
   /** Fold a fresh blueprint in: add any newly-dug chambers/tunnels, update sizes. */
   sync(bp: Tree): void {
     this.meta = { bounds: bp.bounds, newest: bp.newest, hole: bp.hole, holes: bp.holes };
+    if (bp.leavesTotal !== undefined) this.leavesTotal = bp.leavesTotal; // the COUNT is server-derived now (persists across refresh); the sim only animates the piles + leafPool
     this.activeId = bp.newestId ?? null;
     this.activeTs = bp.newestTs ?? 0;
     this.harvest = bp.harvest ?? 0;
@@ -303,7 +304,7 @@ export class ColonySim {
         if (t.dist <= 0) {
           const spot = this.spotIn(t.chamberId); // drop the leaf where it lands
           if (spot) { this.leaves.push(spot); if (this.leaves.length > MAX_LEAVES) this.leaves.shift(); }
-          this.leafPool += 1; this.leavesTotal += 1; // bank the leaf: it'll be spent growing fungus, and counts forever at the top
+          this.leafPool += 1; // bank the leaf for growing fungus; the lifetime COUNT now comes from the server (persists), not this local tally
           t.state = "fade"; t.fade = 1;
         }
       } else { // fade — leaf delivered, the forager dissolves away (no crowding)

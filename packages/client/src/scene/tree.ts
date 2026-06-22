@@ -235,7 +235,7 @@ export class TreeLayout {
         if (cid && ctx.node.has(cid)) forages.push({ id: f.id, chamberId: cid, inFlight: f.doneTs === undefined });
       }
     }
-    return { nodes, tunnels, ants, flora: [], forages, leaves: [], hole: { x: 0, y: 0 }, holes, newest, newestId, newestTs, bounds: bounds(nodes), harvest: snap.harvest };
+    return { nodes, tunnels, ants, flora: [], forages, leaves: [], hole: { x: 0, y: 0 }, holes, newest, newestId, newestTs, bounds: bounds(nodes), harvest: snap.harvest, leavesTotal: snap.leaves };
   }
 
   /** Run the egg simulation over one lineage and place (or fatten) each chamber. */
