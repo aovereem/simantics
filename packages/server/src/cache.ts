@@ -13,7 +13,7 @@ import { join } from "node:path";
  */
 
 // Bump when the serialized shape changes — an old cache is then ignored, not parsed.
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2; // v2: Task gained activeMs/lastTs (v1 caches are ignored + cold-drained)
 
 const CACHE_DIR = join(homedir(), ".claude", "simantics");
 

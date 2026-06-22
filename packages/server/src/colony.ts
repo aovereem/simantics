@@ -11,6 +11,7 @@ const IDLE_MS = 30_000; // no facts for this long → resting
 const RETURN_MS = 120_000; // ... this long → heading home
 const GONE_MS = 600_000; // ... this long → drop from the colony
 const STUCK_MS = 8_000; // a session must stay errored (no recovery) this long to be stuck
+const ACTIVE_CAP = 120_000; // a gap longer than this between a turn's facts is idle, not work — capped when accruing ACTIVE time
 
 interface Task {
   label: string;
@@ -18,6 +19,8 @@ interface Task {
   actions: number;
   startTs: number;
   endTs: number;
+  activeMs: number; // accrued ACTIVE time (capped gaps between facts) — idle time excluded
+  lastTs: number;   // ts of the last fact, to measure the next gap
   children: number;
   edited: boolean;
   defended: boolean;
@@ -121,6 +124,9 @@ export class Colony {
 
     // tool / thinking / tool_result / assistant_text / session_start → accrue work
     const t = this.ensureTask(s, fact.ts);
+    const gap = fact.ts - t.lastTs; // accrue ACTIVE time — short gaps are work (incl. thinking lulls); long gaps are idle, capped
+    if (gap > 0) t.activeMs += Math.min(gap, ACTIVE_CAP);
+    t.lastTs = fact.ts;
     if (fact.tokensIn) { s.totalTokens += fact.tokensIn; t.tokens += fact.tokensIn; }
     if (fact.tokensOut) { s.totalTokens += fact.tokensOut; t.tokens += fact.tokensOut; }
 
@@ -199,7 +205,7 @@ export class Colony {
         label: t.label,
         tokens: t.tokens,
         actions: t.actions,
-        durationMs: (t.done ? t.endTs : now) - t.startTs,
+        durationMs: t.activeMs, // ACTIVE time (idle gaps excluded), not wall-clock — see ACTIVE_CAP
         startTs: t.startTs,
         children: t.children,
         edited: t.edited,
@@ -314,7 +320,7 @@ export class Colony {
   }
 
   private newTask(label: string, ts: number): Task {
-    return { label, tokens: 0, actions: 0, startTs: ts, endTs: ts, children: 0, edited: false, defended: false, blocked: false, done: false, linesAdded: 0, linesRemoved: 0, reads: 0, committed: false };
+    return { label, tokens: 0, actions: 0, startTs: ts, endTs: ts, activeMs: 0, lastTs: ts, children: 0, edited: false, defended: false, blocked: false, done: false, linesAdded: 0, linesRemoved: 0, reads: 0, committed: false };
   }
 }
 

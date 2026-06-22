@@ -538,17 +538,33 @@ export const FUNGUS_BY_NAME: Record<string, Sprite> = Object.fromEntries(
   FUNGUS.map((s) => [s.name, s]),
 );
 
-/** Draw a sprite centered on the current origin (caller sets translate/rotate).
- *  `px` is the world size of one sprite pixel. */
-export function drawSprite(ctx: CanvasRenderingContext2D, s: Sprite, px: number): void {
-  const ox = -s.w / 2, oy = -s.h / 2;
+// Each sprite is baked ONCE to a tiny offscreen bitmap (one canvas-pixel per sprite-
+// pixel) and then blitted with a single drawImage — instead of a fillRect per pixel
+// EVERY frame. That's the difference between hundreds of thousands of draw calls per
+// frame (200+ ants × 200+ fungus beds) and a few hundred. Crispness is preserved by
+// disabling image smoothing on the target context (the scene does this).
+const spriteBitmap = new Map<Sprite, HTMLCanvasElement>();
+
+function bake(s: Sprite): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = s.w; c.height = s.h;
+  const cx = c.getContext("2d")!;
   for (let y = 0; y < s.h; y++) {
     const row = s.pixels[y];
     for (let x = 0; x < s.w; x++) {
-      const c = s.palette[row[x]];
-      if (!c) continue;
-      ctx.fillStyle = c;
-      ctx.fillRect((ox + x) * px, (oy + y) * px, px, px);
+      const col = s.palette[row[x]];
+      if (!col) continue;
+      cx.fillStyle = col;
+      cx.fillRect(x, y, 1, 1);
     }
   }
+  return c;
+}
+
+/** Draw a sprite centered on the current origin (caller sets translate/rotate).
+ *  `px` is the world size of one sprite pixel. */
+export function drawSprite(ctx: CanvasRenderingContext2D, s: Sprite, px: number): void {
+  let bm = spriteBitmap.get(s);
+  if (!bm) { bm = bake(s); spriteBitmap.set(s, bm); }
+  ctx.drawImage(bm, (-s.w / 2) * px, (-s.h / 2) * px, s.w * px, s.h * px);
 }

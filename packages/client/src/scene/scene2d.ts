@@ -92,6 +92,7 @@ export class Scene {
     this.canvas.height = Math.round(vh * this.dpr);
     this.canvas.style.width = vw + "px";
     this.canvas.style.height = vh + "px";
+    this.ctx.imageSmoothingEnabled = false; // crisp nearest-neighbour scaling for the baked sprites (canvas resize resets ctx state)
     this.seedRain();
   }
 
@@ -491,21 +492,33 @@ export class Scene {
     return b > c ? mix(base, blight, Math.min(1, b) * k) : mix(base, moss, c * k);
   }
 
+  /** Is this world point (with radius r) anywhere near the viewport? Skips drawing the
+   *  off-screen majority of chambers/ants/fungus when zoomed in — the big panning win. */
+  private inView(x: number, y: number, r: number): boolean {
+    const sx = x * this.cam.z + this.cam.x, sy = y * this.cam.z + this.cam.y;
+    const pad = r * this.cam.z + 48;
+    return sx > -pad && sx < this.vw + pad && sy > -pad && sy < this.vh + pad;
+  }
+
   private drawColony(ctx: CanvasRenderingContext2D, t: Tree): void {
-    // each tunnel is only drawn as far as it's been carved (carve 0..1)
-    const paths = t.tunnels.map((tn) => ({ pts: partialPts(tn.pts, tn.carve), w: tn.w }));
+    // each tunnel is only drawn as far as it's been carved (carve 0..1); skip the ones
+    // whose whole span sits off-screen so panning a big colony stays cheap.
+    const paths = t.tunnels
+      .filter((tn) => this.inView(tn.pts[0].x, tn.pts[0].y, tn.w) || this.inView(tn.pts[tn.pts.length - 1].x, tn.pts[tn.pts.length - 1].y, tn.w))
+      .map((tn) => ({ pts: partialPts(tn.pts, tn.carve), w: tn.w }));
+    const vis = t.nodes.filter((n) => this.inView(n.x, n.y, n.r + 4)); // only the on-screen chambers
 
     // pass 1 — outer excavated soil (the darkest rim); fungus walls go mossy, blighted ones jaundiced, the queen's gilded
     for (const p of paths) strokeVary(ctx, p.pts, p.w * 1.55, COL.dugRimDeep);
-    for (const n of t.nodes) { blob(ctx, n.x, n.y, n.r + 4, hash(n.id) % 9973); ctx.fillStyle = n.isQueen ? COL.goldDeep : this.chamberTint(n, COL.dugRimDeep, COL.mossDeep, COL.blightDeep, 0.75); ctx.fill(); }
+    for (const n of vis) { blob(ctx, n.x, n.y, n.r + 4, hash(n.id) % 9973); ctx.fillStyle = n.isQueen ? COL.goldDeep : this.chamberTint(n, COL.dugRimDeep, COL.mossDeep, COL.blightDeep, 0.75); ctx.fill(); }
 
     // pass 2 — inner dug rim (teal-mossy with crop, jaundiced when blighted, gold for the queen)
     for (const p of paths) strokeVary(ctx, p.pts, p.w * 1.28, COL.dugRim);
-    for (const n of t.nodes) { blob(ctx, n.x, n.y, n.r + 1.8, hash(n.id) % 9973); ctx.fillStyle = n.isQueen ? COL.gold : this.chamberTint(n, COL.dugRim, COL.moss, COL.blight, 0.75); ctx.fill(); }
+    for (const n of vis) { blob(ctx, n.x, n.y, n.r + 1.8, hash(n.id) % 9973); ctx.fillStyle = n.isQueen ? COL.gold : this.chamberTint(n, COL.dugRim, COL.moss, COL.blight, 0.75); ctx.fill(); }
 
     // pass 3 — the hollow itself; drawn last so tunnel & chamber voids merge
     for (const p of paths) strokeVary(ctx, p.pts, p.w, COL.cavity);
-    for (const n of t.nodes) {
+    for (const n of vis) {
       blob(ctx, n.x, n.y, n.r, hash(n.id) % 9973);
       const g = ctx.createRadialGradient(n.x, n.y - n.r * 0.35, n.r * 0.15, n.x, n.y, n.r);
       // lush rooms get a faint teal cellar glow, blighted ones a sick olive; the queen's
@@ -516,10 +529,10 @@ export class Scene {
     }
 
     // pass 4 — a boulder where a dig was interrupted (hit a rock, couldn't continue)
-    for (const n of t.nodes) if (n.blocked) this.drawRock(ctx, n);
+    for (const n of vis) if (n.blocked) this.drawRock(ctx, n);
 
     // pass 5 — what lives in the rooms
-    for (const n of t.nodes) this.drawEgg(ctx, n);
+    for (const n of vis) this.drawEgg(ctx, n);
 
     if (this.selectedId) this.drawSelection(ctx, t);
   }
@@ -577,6 +590,7 @@ export class Scene {
    *  queen's central larder heap. Drawn on the chamber floor, under leaves and ants. */
   private drawFungus(ctx: CanvasRenderingContext2D, t: Tree): void {
     for (const n of t.nodes) {
+      if (!this.inView(n.x, n.y, n.r)) continue; // skip off-screen gardens
       if (n.isQueen) { this.drawPile(ctx, n, t.pile ?? 0); continue; } // fresh hauled fungus heaps on her floor; the repletes (ants) eat it
       if (n.blocked) continue; // a boulder (interrupted dig) is bare rock — no fungus grows on it
       const crop = n.crop ?? 0, blight = n.blight ?? 0;
@@ -629,6 +643,7 @@ export class Scene {
     const s = FLORA_BY_NAME["leaf"];
     if (!s) return;
     for (const l of t.leaves) {
+      if (!this.inView(l.x, l.y, 4)) continue;
       ctx.save();
       ctx.translate(l.x, l.y);
       drawSprite(ctx, s, LEAF_PX);
@@ -656,6 +671,7 @@ export class Scene {
       ? new Set(t.tunnels.filter((tn) => tn.fromId === this.selectedId && !tn.cross).map((tn) => tn.toId))
       : null;
     for (const a of t.ants) {
+      if (!this.inView(a.x, a.y, 16)) continue; // skip off-screen ants
       const s = SPRITE_BY_CASTE[a.sprite ?? a.caste] ?? SPRITE_BY_CASTE["worker"];
       if (!s) continue;
       if (a.digging) { // a soft pulse marks an agent actively working

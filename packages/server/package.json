@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "node --watch --import tsx src/cli.ts",
+    "dev": "node --watch --import tsx src/cli.ts --all",
     "demo": "node --watch --import tsx src/cli.ts --demo",
     "start": "node dist/cli.js"
   },
