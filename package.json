@@ -1,0 +1,26 @@
+{
+  "name": "antics",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A living backyard colony that grows while your agents work.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/client"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @antics/shared",
+    "build": "npm run build:shared && npm run build -w @antics/client && npm run build -w @antics/server && npm run copy:client",
+    "copy:client": "node -e \"require('fs').cpSync('packages/client/dist','packages/server/dist/public',{recursive:true})\"",
+    "release": "node scripts/release.mjs",
+    "start": "node packages/server/dist/cli.js",
+    "demo": "npm run build:shared && concurrently -k -n server,client -c green,cyan \"npm run demo -w @antics/server\" \"npm run dev -w @antics/client\"",
+    "dev": "npm run build:shared && concurrently -k -n server,client -c green,cyan \"npm run dev -w @antics/server\" \"npm run dev -w @antics/client\"",
+    "server:demo": "npm run build:shared && npm run demo -w @antics/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "esbuild": "^0.28.1"
+  }
+}

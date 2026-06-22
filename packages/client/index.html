@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>antics</title>
+    <style>
+      /* Dusk backyard. Soil and moss, one warm dewdrop accent. The scene is the
+         hero; this chrome stays out of its way. */
+      :root {
+        --soil-deep: #241a13;
+        --soil: #33271c;
+        --moss: #6f8a4f;
+        --dew: #e8b04b;
+        --bone: #d8cfc0;
+        --bone-dim: #8c8377;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { height: 100%; overflow: hidden; background: var(--soil-deep); }
+      body {
+        font: 11px/1.4 ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+        color: var(--bone);
+      }
+      #stage { position: fixed; inset: 0; }
+      canvas { display: block; }
+
+      /* HUD: a thin readout pinned top-left. A label labels; nothing decorates. */
+      #hud {
+        position: fixed; top: 8px; left: 10px; z-index: 10;
+        display: flex; gap: 14px; align-items: baseline;
+        pointer-events: none; user-select: none;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      }
+      #hud .brand {
+        font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+        color: var(--dew);
+      }
+      #hud .stat { color: var(--bone-dim); }
+      #hud .stat b { color: var(--bone); font-weight: 600; }
+      #hud .health { pointer-events: auto; cursor: help; }
+      #hud .health.h-thrive b { color: var(--moss); }
+      #hud .health.h-steady b { color: var(--bone); }
+      #hud .health.h-lean   b { color: var(--dew); }
+      #hud .health.h-hungry b { color: #d2693f; }
+      #health-tip {
+        position: fixed; top: 30px; left: 10px; z-index: 12; display: none;
+        max-width: 264px; padding: 8px 10px; line-height: 1.5;
+        background: rgba(18,13,9,0.94); border: 1px solid rgba(216,207,192,0.14);
+        border-radius: 4px; color: var(--bone-dim);
+      }
+      #health-tip b { color: var(--bone); font-weight: 600; }
+
+      /* Detail pop — appears on hover/click of a bug, floats rather than docks. */
+      #detail {
+        position: fixed; z-index: 11; display: none;
+        max-width: 220px; padding: 8px 10px;
+        background: rgba(18,13,9,0.92); border: 1px solid rgba(216,207,192,0.14);
+        border-radius: 4px; color: var(--bone);
+        pointer-events: none;
+      }
+      #detail .caste { color: var(--dew); text-transform: capitalize; font-weight: 600; }
+      #detail .row { color: var(--bone-dim); margin-top: 2px; }
+
+      /* Modal — opens on click of a chamber; richer, interactive (brood list). */
+      #modal {
+        position: fixed; top: 40px; right: 12px; z-index: 12; display: none;
+        width: 244px; padding: 11px 13px;
+        background: rgba(18,13,9,0.96); border: 1px solid rgba(216,207,192,0.16);
+        border-radius: 5px; color: var(--bone);
+      }
+      #modal .m-head { display: flex; justify-content: space-between; align-items: baseline; }
+      #modal .m-title { color: var(--dew); font-weight: 600; }
+      #modal .m-x { cursor: pointer; color: var(--bone-dim); padding: 0 2px; }
+      #modal .m-x:hover { color: var(--bone); }
+      #modal .m-row { color: var(--bone-dim); margin-top: 3px; }
+      #modal .m-sub { color: var(--bone); margin-top: 9px; margin-bottom: 1px; font-weight: 600; }
+      #modal .brow { color: var(--bone-dim); margin-top: 2px; padding: 2px 5px; cursor: pointer; border-radius: 3px; }
+      #modal .brow:hover { background: rgba(232,176,75,0.15); color: var(--bone); }
+      #modal .brow b { color: var(--bone); font-weight: 600; }
+
+      #status {
+        position: fixed; bottom: 8px; right: 10px; z-index: 10;
+        color: var(--bone-dim); pointer-events: none;
+      }
+      #status.live { color: var(--moss); }
+
+      /* Event chip — what the colony is doing right now. Hover for what it means. */
+      #event {
+        position: fixed; bottom: 8px; left: 10px; z-index: 11;
+        display: flex; gap: 7px; align-items: center; cursor: help;
+        color: var(--bone-dim); user-select: none;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      }
+      #event .ev-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+      #event #event-label { text-transform: lowercase; letter-spacing: 0.04em; }
+      #event.ev-dig    { color: var(--dew); }
+      #event.ev-forage { color: var(--moss); }
+      #event.ev-harvest { color: #c7a24a; }
+      #event.ev-feed   { color: #d2693f; }
+      #event.ev-rain   { color: #6fa8d6; }
+      #event.ev-quiet  { color: var(--bone-dim); }
+      #event.ev-dig .ev-dot, #event.ev-forage .ev-dot, #event.ev-harvest .ev-dot, #event.ev-feed .ev-dot, #event.ev-rain .ev-dot {
+        animation: evpulse 1.6s ease-in-out infinite;
+      }
+      @keyframes evpulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.65); } }
+      #event-tip {
+        position: fixed; bottom: 30px; left: 10px; z-index: 12; display: none;
+        max-width: 264px; padding: 8px 10px; line-height: 1.5;
+        background: rgba(18,13,9,0.94); border: 1px solid rgba(216,207,192,0.14);
+        border-radius: 4px; color: var(--bone-dim);
+      }
+      #event-tip b { color: var(--bone); font-weight: 600; }
+
+      /* Key legend — pinned bottom-centre. */
+      #keys {
+        position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 10;
+        display: flex; gap: 16px; color: var(--bone-dim); pointer-events: none; user-select: none;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      }
+      #keys kbd {
+        display: inline-block; min-width: 13px; text-align: center; margin-right: 4px;
+        color: var(--bone); background: rgba(216,207,192,0.10);
+        border: 1px solid rgba(216,207,192,0.20); border-radius: 3px;
+        padding: 0 4px; font: inherit; font-weight: 600;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        :root { --reduced: 1; }
+        #event .ev-dot { animation: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="hud">
+      <span class="brand">antics</span>
+      <span class="stat">ants <b id="stat-ants">0</b></span>
+      <span class="stat">chambers <b id="stat-rooms">0</b></span>
+      <span class="stat">crumbs <b id="stat-food">0</b></span>
+      <span class="stat">leaf <b id="stat-leaves">0</b></span>
+      <span class="stat health" id="stat-health-wrap">health <b id="stat-health">—</b></span>
+      <span class="stat">depth <b id="stat-deep">0m</b></span>
+    </div>
+    <div id="health-tip"></div>
+    <div id="detail"></div>
+    <div id="modal"></div>
+    <div id="event" class="ev-quiet"><span class="ev-dot"></span><span id="event-label">quiet</span></div>
+    <div id="event-tip"></div>
+    <div id="keys"><span><kbd>F</kbd>fit colony</span><span><kbd>W</kbd>last worker</span></div>
+    <div id="status">connecting…</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
