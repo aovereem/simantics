@@ -302,7 +302,7 @@ export class ColonySim {
         t.x = here.x; t.y = here.y;
         if (here.x !== behind.x || here.y !== behind.y) t.angle = Math.atan2(behind.y - here.y, behind.x - here.x);
         if (t.dist <= 0) {
-          const spot = this.spotIn(t.chamberId); // drop the leaf where it lands
+          const spot = this.dropSpot(t.chamberId, t.x, t.y); // land in a real room — origin if it's still there, else the nearest revealed one
           if (spot) { this.leaves.push(spot); if (this.leaves.length > MAX_LEAVES) this.leaves.shift(); }
           this.leafPool += 1; // bank the leaf for growing fungus; the lifetime COUNT now comes from the server (persists), not this local tally
           t.state = "fade"; t.fade = 1;
@@ -757,6 +757,21 @@ export class ColonySim {
     const ang = Math.random() * Math.PI * 2;
     const rad = Math.sqrt(Math.random()) * c.r * 0.6;
     return { x: c.x + Math.cos(ang) * rad, y: c.y + Math.sin(ang) * rad * 0.78 };
+  }
+
+  /** Where a returning forager sets its leaf down: inside its origin chamber if that's
+   *  still a real, revealed room — otherwise the nearest revealed room to where it came
+   *  home, so a leaf never lands in bare soil (an unrevealed/merged-away origin) and gets
+   *  forgotten. Keeps the leaf with the work without leaving it stranded in a tunnel. */
+  private dropSpot(chamberId: string, x: number, y: number): Pt | null {
+    if (this.cham.get(chamberId)?.revealed) return this.spotIn(chamberId);
+    let best: string | null = null, bd = Infinity;
+    for (const [id, c] of this.cham) {
+      if (!c.revealed) continue;
+      const d = Math.hypot(c.x - x, c.y - y);
+      if (d < bd) { bd = d; best = id; }
+    }
+    return best ? this.spotIn(best) : null;
   }
 
   /** A hungry worker heads for the richest adjacent garden to graze. Returns false when
