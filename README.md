@@ -6,7 +6,7 @@
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 
 A 16-bit cross-section of the soil, in your browser, that digs, forages, and farms in
-real time as your agents work. Every session is a colony; every turn carves a new
+real time as your agents work. Every project is a colony; every turn carves a new
 chamber; the code you ship grows fungus the ants harvest. No combat, no scores — just a
 quiet warren you can glance at out of the corner of your eye.
 
